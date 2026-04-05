@@ -88,6 +88,19 @@ services:
     networks:
       - calisaas_network
 
+# ==========================================
+  # 6. FRONTEND (REACT)
+  # ==========================================
+  frontend:
+    build: ./frontend
+    container_name: calisaas_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - keycloak
+    networks:
+      - calisaas_network
+
 volumes:
   postgres_data:
 
