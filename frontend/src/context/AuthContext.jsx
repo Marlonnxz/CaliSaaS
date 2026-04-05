@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useRef, useContext } from 'react';
 import Keycloak from 'keycloak-js';
 
 const AuthContext = createContext();
@@ -6,12 +6,17 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [keycloak, setKeycloak] = useState(null);
   const [authenticated, setAuthenticated] = useState(false);
+  const isRun = useRef(false); // 👈 1. Creamos un "candado"
 
   useEffect(() => {
+    // 👈 2. Si ya se ejecutó una vez, detenemos la función aquí
+    if (isRun.current) return; 
+    isRun.current = true; // 👈 3. Cerramos el candado
+
     const kc = new Keycloak({
-      url: import.meta.env.VITE_KEYCLOAK_URL,
-      realm: import.meta.env.VITE_KEYCLOAK_REALM,
-      clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+      url: 'http://localhost:8080',
+      realm: 'CaliSaaS',
+      clientId: 'frontend-react'
     });
 
     kc.init({ 
@@ -21,16 +26,14 @@ export const AuthProvider = ({ children }) => {
       setKeycloak(kc);
       setAuthenticated(auth);
     }).catch(err => console.error("Error en Keycloak:", err));
+
   }, []);
+
+  if (!keycloak) return <div>Cargando la seguridad...</div>;
 
   return (
     <AuthContext.Provider value={{ keycloak, authenticated }}>
-      {/* Si no ha cargado Keycloak, mostramos un loading */}
-      {keycloak && authenticated ? children : (
-        <div className="flex h-screen items-center justify-center bg-gray-900 text-white">
-          <p className="text-xl animate-pulse">Cargando CaliSaaS Security...</p>
-        </div>
-      )}
+      {children}
     </AuthContext.Provider>
   );
 };
