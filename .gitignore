@@ -1,0 +1,20 @@
+# Entornos virtuales de Python
+venv/
+env/
+.venv/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Variables de entorno y secretos
+.env
+.env.*
+
+# Base de datos local de SQLite (por si se usa antes de conectar PostgreSQL)
+db.sqlite3
+
+# Archivos de SO
+.DS_Store
+Thumbs.db
