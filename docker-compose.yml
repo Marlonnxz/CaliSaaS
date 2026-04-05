@@ -88,7 +88,7 @@ services:
     networks:
       - calisaas_network
 
-# ==========================================
+  # ==========================================
   # 6. FRONTEND (REACT)
   # ==========================================
   frontend:
@@ -98,6 +98,23 @@ services:
       - "5173:80"
     depends_on:
       - keycloak
+    networks:
+      - calisaas_network
+
+  # ==========================================
+  # 7. BACKEND (DJANGO)
+  # ==========================================
+  backend:
+    build: ./backend
+    container_name: calisaas_backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres-db
+      - kafka
     networks:
       - calisaas_network
 
