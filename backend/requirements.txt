@@ -4,3 +4,4 @@ psycopg2-binary
 djangorestframework-simplejwt==5.3.1
 djangorestframework-simplejwt==5.3.1
 cryptography==42.0.5
+django-cors-headers

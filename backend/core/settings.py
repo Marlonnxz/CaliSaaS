@@ -39,10 +39,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders', # <-- Añadir aquí
     'gyms', # <-- nueva app
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -161,3 +163,9 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'username',
     'USER_ID_CLAIM': 'preferred_username',
 }
+
+# --- CONFIGURACIÓN DE CORS ---
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", # Puerto estándar de React
+    "http://localhost:5173", # Puerto estándar de Vite (React/Vue)
+]
