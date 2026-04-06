@@ -1,20 +1,20 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useRole } from '../hooks/useRole';
 
-export const ProtectedRoute = ({ children, role }) => {
-  const { keycloak } = useAuth();
+const ProtectedRoute = ({ children, requireAdmin }) => {
+  const { authenticated } = useAuth();
+  const { isAdmin } = useRole();
 
-  // Verifica si el usuario tiene el rol necesario
-  const hasRole = keycloak.hasRealmRole(role);
+  if (!authenticated) {
+    return <Navigate to="/" replace />;
+  }
 
-  if (!hasRole) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
-        <h1 className="text-2xl text-red-600 font-bold">
-          Acceso Denegado: No tienes permisos para ver esto.
-        </h1>
-      </div>
-    );
+  if (requireAdmin && !isAdmin()) {
+    return <Navigate to="/training" replace />;
   }
 
   return children;
 };
+
+export default ProtectedRoute;

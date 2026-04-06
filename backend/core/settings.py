@@ -12,19 +12,24 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+environ.Env.read_env(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-a_+t3h=+vfdb62opn22f#p^q-0almf))s&bok2x7wao0ft4-l0'
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-fallback-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
@@ -52,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.TenantMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -81,11 +87,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'keycloak',        # El nombre de la DB 
-        'USER': 'admin_db',        # El usuario
-        'PASSWORD': 'password_db', # La contraseña
-        'HOST': 'postgres-db',     # El nombre del contenedor de Postgres
-        'PORT': '5432',
+        'NAME': env('DB_NAME', default='keycloak'),
+        'USER': env('DB_USER', default='admin_db'),
+        'PASSWORD': env('DB_PASSWORD', default='password_db'),
+        'HOST': env('DB_HOST', default='postgres-db'),
+        'PORT': env('DB_PORT', default='5432'),
     }
 }
 
@@ -133,10 +139,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # --- CONFIGURACIÓN DE SEGURIDAD (KEYCLOAK) ---
 
 # Estos son los datos del "búnker" en Keycloak
-KEYCLOAK_SERVER_URL = "http://localhost:8080/"
-KEYCLOAK_REALM = "CaliSaaS"
-KEYCLOAK_CLIENT_ID = "calisaas-backend"
-KEYCLOAK_CLIENT_SECRET = "Pz096f5UL1I3eF1hYYk8O27Bz5L9nfp7" # llave aquí!
+KEYCLOAK_SERVER_URL = env('KEYCLOAK_SERVER_URL', default='http://keycloak:8080/')
+KEYCLOAK_REALM = env('KEYCLOAK_REALM', default='CaliSaaS')
+KEYCLOAK_CLIENT_ID = env('KEYCLOAK_CLIENT_ID', default='calisaas-backend')
+KEYCLOAK_CLIENT_SECRET = env('KEYCLOAK_CLIENT_SECRET', default='secret') # llave aquí!
+KAFKA_BROKER_URL = env('KAFKA_BROKER_URL', default='kafka:29092')
 
 # Configuramos Django REST Framework para que pida "carnet" (Token)
 REST_FRAMEWORK = {
@@ -165,7 +172,7 @@ SIMPLE_JWT = {
 }
 
 # --- CONFIGURACIÓN DE CORS ---
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", # Puerto estándar de React
-    "http://localhost:5173", # Puerto estándar de Vite (React/Vue)
-]
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+    "http://localhost:3000",
+    "http://localhost:5173",
+])

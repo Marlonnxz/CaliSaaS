@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useRef, useContext } from 'react';
-import keycloak from '../keycloak'; // 👈 Importas la instancia global
+import keycloak from '../../keycloak'; // 👈 Importas la instancia global
 
 const AuthContext = createContext();
 
