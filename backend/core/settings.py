@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -126,3 +127,37 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --- CONFIGURACIÓN DE SEGURIDAD (KEYCLOAK) ---
+
+# Estos son los datos del "búnker" en Keycloak
+KEYCLOAK_SERVER_URL = "http://localhost:8080/"
+KEYCLOAK_REALM = "CaliSaaS"
+KEYCLOAK_CLIENT_ID = "calisaas-backend"
+KEYCLOAK_CLIENT_SECRET = "Pz096f5UL1I3eF1hYYk8O27Bz5L9nfp7" # llave aquí!
+
+# Configuramos Django REST Framework para que pida "carnet" (Token)
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated', 
+    ),
+}
+
+SIMPLE_JWT = {
+    'ALGORITHM': 'RS256',
+    'JWK_URL': 'http://keycloak:8080/realms/CaliSaaS/protocol/openid-connect/certs',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    
+    # --- AJUSTES DE TOLERANCIA CRÍTICOS ---
+    'VERIFY_ISSUER': False,    # Ignora si el token dice "localhost" o "keycloak"
+    'VERIFY_AUDIENCE': False,  # Ignora si el token es para 'account' o 'calisaas-backend'
+    'TOKEN_TYPE_CLAIM': None,  # Keycloak no siempre manda el campo 'typ' como Django quiere
+    'JTI_CLAIM': None,         # Evita errores si el ID único del token no coincide
+    'LEEWAY': 300,             # Damos 5 minutos de margen por si los relojes de Docker están mal
+    
+    'USER_ID_FIELD': 'username',
+    'USER_ID_CLAIM': 'preferred_username',
+}
