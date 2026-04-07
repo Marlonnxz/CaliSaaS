@@ -35,9 +35,9 @@ class AthleteListCreateTests(APITestCase):
         response = self.client.get(self.url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Solo debe haber 1 atleta en la respuesta (athlete1)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['first_name'], 'John')
+        # Solo debe haber 1 atleta en la respuesta (athlete1), extraemos de 'results' por la paginación
+        self.assertEqual(len(response.data.get('results', [])), 1)
+        self.assertEqual(response.data['results'][0]['first_name'], 'John')
 
     def test_cannot_create_athlete_in_other_owners_gym_idor_prevention(self):
         """

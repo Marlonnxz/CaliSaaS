@@ -17,11 +17,11 @@ docker-compose up --build -d
 Una vez que el backend esté arriba, necesitamos crear las tablas y un par de usuarios iniciales para que el sistema reconozca a quién le pertenecen los gimnasios. En la misma terminal, ejecuta:
 
 ```bash
-# Migrar la base de datos
+# Migrar la base de datos (aplica las 4 tablas de entrenamiento y seguridad)
 docker-compose exec backend python manage.py migrate
 
-# Crear usuarios base (owner y athlete) en la base de datos
-docker-compose exec backend python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); User.objects.filter(username='owner').exists() or User.objects.create_user(username='owner', password='owner'); User.objects.filter(username='athlete').exists() or User.objects.create_user(username='athlete', password='athlete')"
+# Crear usuarios base (owner superadmin y athlete)
+docker-compose exec backend python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); u, _ = User.objects.get_or_create(username='owner'); u.set_password('owner'); u.is_staff=True; u.is_superuser=True; u.save(); a, _ = User.objects.get_or_create(username='athlete'); a.set_password('athlete'); a.save()"
 ```
 
 ### 3. Configurar la Seguridad (Keycloak)
