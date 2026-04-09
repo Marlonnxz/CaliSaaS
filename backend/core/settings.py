@@ -148,7 +148,7 @@ KAFKA_BROKER_URL = env('KAFKA_BROKER_URL', default='kafka:29092')
 # Configuramos Django REST Framework para que pida "carnet" (Token)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'core.authentication.KeycloakJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated', 
