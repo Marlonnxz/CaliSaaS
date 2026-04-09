@@ -4,6 +4,9 @@ export PATH=$PATH:/opt/keycloak/bin
 # Esperamos un poco o nos autenticamos (asumiendo que ya hay credenciales activadas arriba)
 kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
 
+# Creamos el reino CaliSaaS
+kcadm.sh create realms -s realm=CaliSaaS -s enabled=true || true
+
 # Create frontend client
 cat <<EOF > /tmp/frontend-client.json
 {
