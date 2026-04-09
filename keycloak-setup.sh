@@ -31,11 +31,17 @@ cat <<EOF > /tmp/backend-client.json
 EOF
 kcadm.sh create clients -r CaliSaaS -f /tmp/backend-client.json
 
-# Create testing users
-kcadm.sh create users -r CaliSaaS -s username=owner -s enabled=true -s "attributes.role=admin"
-kcadm.sh set-password -r CaliSaaS --username owner --new-password owner
+# Create Roles
+kcadm.sh create roles -r CaliSaaS -s name=admin_gym || true
+kcadm.sh create roles -r CaliSaaS -s name=atleta || true
 
-kcadm.sh create users -r CaliSaaS -s username=athlete -s enabled=true -s "attributes.role=athlete"
+# Create testing users
+kcadm.sh create users -r CaliSaaS -s username=owner -s enabled=true
+kcadm.sh set-password -r CaliSaaS --username owner --new-password owner
+kcadm.sh add-roles -r CaliSaaS --uusername owner --rolename admin_gym
+
+kcadm.sh create users -r CaliSaaS -s username=athlete -s enabled=true
 kcadm.sh set-password -r CaliSaaS --username athlete --new-password athlete
+kcadm.sh add-roles -r CaliSaaS --uusername athlete --rolename atleta
 
 echo "Keycloak setup finished successfully."
