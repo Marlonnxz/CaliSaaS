@@ -8,7 +8,11 @@ from .serializers import (
     ExerciseSerializer, RoutineSerializer, 
     RoutineExerciseSerializer, WorkoutLogSerializer
 )
-from .services import send_athlete_created_event
+from .services import (
+    send_athlete_created_event,
+    send_routine_created_event,
+    send_workout_logged_event
+)
 
 logger = logging.getLogger('calisaas_logger')
 
@@ -81,6 +85,16 @@ class RoutineListCreate(generics.ListCreateAPIView):
     def get_queryset(self):
         return Routine.objects.all()
 
+    # --- NUEVO CÓDIGO ---
+    def perform_create(self, serializer):
+        gym = serializer.validated_data.get('gym')
+        if gym and gym.owner != self.request.user:
+            raise serializers.ValidationError(
+                {"gym": "Acceso denegado: No puedes crear rutinas para un gimnasio que no te pertenece."}
+            )
+        routine = serializer.save()
+        send_routine_created_event(routine) 
+
 class RoutineRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = RoutineSerializer
     def get_queryset(self):
@@ -105,6 +119,15 @@ class WorkoutLogListCreate(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return WorkoutLog.objects.all()
+
+    def perform_create(self, serializer):
+        gym = serializer.validated_data.get('gym')
+        if gym and gym.owner != self.request.user:
+            raise serializers.ValidationError(
+                {"gym": "Acceso denegado: No puedes registrar entrenamientos en un gimnasio que no te pertenece."}
+            )
+        workout_log = serializer.save()
+        send_workout_logged_event(workout_log)
 
 class WorkoutLogRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = WorkoutLogSerializer
