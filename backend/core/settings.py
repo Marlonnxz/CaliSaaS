@@ -179,3 +179,45 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     "http://localhost:3000",
     "http://localhost:5173",
 ])
+
+# --- CONFIGURACIÓN DE CACHÉ ---
+# Para demostración universitaria usamos Memoria Local. Hace consultas súper rápidas.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'calisaas-cache',
+    }
+}
+
+# --- CONFIGURACIÓN DE LOGGING (TRAZABILIDAD) ---
+# Formatea y captura los eventos de la aplicación en la terminal de forma empresarial.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'empresarial': {
+            'format': '[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'empresarial',
+        },
+    },
+    'loggers': {
+        # Captura todos los logs que nosotros escribamos ("calisaas_logger")
+        'calisaas_logger': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        # (Opcional) si el profesor pide ver trazabilidad de la Base de Datos, puedes
+        # descomentar el bloque de db.backends.
+        # 'django.db.backends': {
+        #     'level': 'DEBUG',
+        #     'handlers': ['console'],
+        # },
+    },
+}

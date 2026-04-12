@@ -1,4 +1,7 @@
 from rest_framework import generics, serializers
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+import logging
 from .models import Gym, Athlete, Exercise, Routine, RoutineExercise, WorkoutLog
 from .serializers import (
     GymSerializer, AthleteSerializer, 
@@ -6,6 +9,8 @@ from .serializers import (
     RoutineExerciseSerializer, WorkoutLogSerializer
 )
 from .services import send_athlete_created_event
+
+logger = logging.getLogger('calisaas_logger')
 
 # --- GYM VIEWS ---
 class GymListCreate(generics.ListCreateAPIView):
@@ -31,6 +36,11 @@ class AthleteListCreate(generics.ListCreateAPIView):
     def get_queryset(self):
         return Athlete.objects.all()
 
+    @method_decorator(cache_page(60 * 15))
+    def get(self, request, *args, **kwargs):
+        logger.info(f"El usuario {request.user.username} consultó la lista de Atletas (Caché por 15 min).")
+        return super().get(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         gym = serializer.validated_data.get('gym')
         if gym.owner != self.request.user:
@@ -52,6 +62,11 @@ class ExerciseListCreate(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return Exercise.objects.all()
+
+    @method_decorator(cache_page(60 * 15))
+    def get(self, request, *args, **kwargs):
+        logger.info(f"El usuario {request.user.username} consultó el catálogo de Ejercicios (Caché).")
+        return super().get(request, *args, **kwargs)
 
 class ExerciseRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ExerciseSerializer
