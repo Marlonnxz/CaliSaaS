@@ -10,77 +10,91 @@ Este proyecto implementa una arquitectura distribuida (microservicios) orientada
 
 - **Frontend:** Angular 17+ (Standalone Components, sin `AppModule`).
 - **Backend Core:** Django (Python) con Django REST Framework y PostgreSQL.
-- **Backend Secundario (Ej. Auditoría):** Node.js con MongoDB y MySQL (por implementar).
 - **Gestión de Identidad:** Keycloak (OIDC, JWT).
 - **Mensajería Asíncrona:** Apache Kafka + Zookeeper.
 - **Infraestructura:** Docker & Docker Compose.
 
 ---
 
-## 🚀 Requisitos Previos
+## 🚀 Requisitos Previos (¡Muy Importante!)
 
-Asegúrate de tener instalado en tu máquina local:
-1. **Docker y Docker Compose:** Para levantar toda la infraestructura.
-2. **Node.js (v18 o superior):** Para compilar y levantar el proyecto de Angular.
-3. **Git:** Para clonar el repositorio.
-
----
-
-## ⚙️ Pasos para Levantar la Infraestructura (Docker)
-
-Todo el ecosistema de bases de datos, Kafka y Keycloak está orquestado. Sigue estos pasos exactamente en este orden:
-
-### 1. Clonar y configurar variables de entorno
-Crea un archivo llamado `.env` en la raíz del proyecto (basado en el `.env.example`).
-**Nota importante:** En el `.env`, la variable `HOST_IP` debe ser tu dirección IP en la red local (ejemplo: `192.168.1.5`). Esto es vital para que Angular y Keycloak se comuniquen correctamente y el profesor pueda conectarse desde otros dispositivos en la universidad.
-
-### 2. Levantar los contenedores
-Abre tu terminal en la raíz del proyecto y ejecuta:
-```bash
-docker-compose up -d --build
-```
-Espera un par de minutos para que todas las bases de datos y Keycloak se inicialicen correctamente.
-
-### 3. Configurar Keycloak Automáticamente
-El script `keycloak-setup.sh` contiene todas las configuraciones necesarias (Reino `CaliSaaS`, Cliente `angular-frontend`, roles y usuarios de prueba).
-Como estás en Windows, la forma más fácil de ejecutarlo es inyectándolo directamente al contenedor de Keycloak:
-```powershell
-docker cp keycloak-setup.sh calisaas_keycloak:/tmp/keycloak-setup.sh
-docker exec calisaas_keycloak bash /tmp/keycloak-setup.sh
-```
-Con esto tendrás listos los siguientes usuarios para hacer pruebas:
-- **Usuario:** `owner` | **Contraseña:** `owner` (Rol: admin_gym)
-- **Usuario:** `athlete` | **Contraseña:** `athlete` (Rol: atleta)
+Para que el proyecto funcione en tu computadora, necesitas tener instalado:
+1. **Docker Desktop:** [Descárgalo aquí](https://www.docker.com/products/docker-desktop/). ¡Asegúrate de que la aplicación de Docker esté **abierta y corriendo** antes de continuar!
+2. **Node.js (v18 o superior):** [Descárgalo aquí](https://nodejs.org/).
+3. **Git:** Para clonar el proyecto.
 
 ---
 
-## 🎨 Pasos para Levantar el Frontend (Angular)
+## ⚙️ GUÍA PASO A PASO: Cómo levantar el proyecto
 
-El frontend ha sido configurado sin librerías "mágicas". El manejo de tokens y la inyección a través de Interceptors se hace **completamente de forma manual**.
+Sigue estas instrucciones al pie de la letra (¡es a prueba de fallos!):
 
-1. Entra a la carpeta de Angular:
+### PASO 1: Configurar la IP de tu computadora
+El proyecto necesita saber tu IP local para que los servicios se puedan comunicar y Keycloak funcione correctamente.
+1. Abre tu terminal (CMD o PowerShell) y escribe `ipconfig` (si usas Windows).
+2. Busca la "Dirección IPv4" (ejemplo: `192.168.1.5` o `192.168.0.20`).
+3. En la carpeta raíz de este proyecto, haz una copia del archivo `.env.example` y llámala **exactamente** `.env`.
+4. Abre ese archivo `.env` y asegúrate de que la primera línea tenga tu IP. Por ejemplo:
+   ```env
+   HOST_IP=192.168.1.5
+   ```
+   *(¡No pongas localhost ni 127.0.0.1! Tiene que ser la IP de tu red).*
+
+### PASO 2: Levantar las Bases de Datos y el Backend
+1. Abre una terminal en la carpeta principal del proyecto (donde está el archivo `docker-compose.yml`).
+2. Escribe el siguiente comando y presiona Enter:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. **¡Paciencia!** La primera vez tomará varios minutos en descargar e instalar todo. Espera a que termine.
+
+### PASO 3: Configurar el sistema de Logins (Keycloak)
+El servidor de logins arranca vacío, así que debemos inyectarle la configuración de nuestro gimnasio.
+1. Abre **otra ventana de terminal** (PowerShell o CMD) en la misma carpeta raíz del proyecto.
+2. Pega este primer comando y dale Enter:
+   ```powershell
+   docker cp keycloak-setup.sh calisaas_keycloak:/tmp/keycloak-setup.sh
+   ```
+3. Pega este segundo comando y dale Enter (este creará los usuarios y el gimnasio):
+   ```powershell
+   docker exec calisaas_keycloak bash /tmp/keycloak-setup.sh
+   ```
+   *Deberías ver un mensaje que dice "Keycloak setup finished successfully."*
+
+Con esto ya tienes tus cuentas de prueba listas:
+👉 **Usuario:** `owner` | **Contraseña:** `owner` (Es el administrador)
+👉 **Usuario:** `athlete` | **Contraseña:** `athlete` (Es un deportista)
+
+### PASO 4: Encender la Interfaz Gráfica (Frontend Angular)
+¡Buenas noticias! El frontend es "inteligente" y detectará tu IP automáticamente, no tienes que cambiar código.
+
+1. Abre una terminal y métete a la carpeta del frontend:
    ```bash
    cd frontend-angular
    ```
-2. Instala las dependencias:
+2. Instala los paquetes de Node:
    ```bash
    npm install
    ```
-3. Levanta el servidor con certificados seguros locales:
+3. Enciende el servidor de Angular:
    ```bash
    npm start
    ```
-   > **⚠️ OJO:** Este comando internamente ejecuta `ng serve --host 0.0.0.0 --ssl`. Usamos `--ssl` porque Keycloak 26 utiliza políticas estrictas de seguridad web (PKCE) que **solo funcionan bajo HTTPS**.
+   > **⚠️ NOTA:** Este comando levanta Angular con seguridad SSL. Es obligatorio porque Keycloak bloquea los logins si la página no es HTTPS.
 
-4. **Accede a la aplicación:** Abre tu navegador y dirígete a:
-   👉 `https://TU_IP_LOCAL:4200` (Ej: `https://192.168.1.5:4200`)
-   *(Acepta la advertencia de seguridad del navegador dándole a "Avanzado > Continuar").*
+### PASO 5: ¡Entrar a la Plataforma!
+1. Abre tu navegador (Google Chrome o Edge) y entra a esta dirección, **usando la misma IP que pusiste en el PASO 1**:
+   👉 `https://TU_IP_LOCAL:4200` (Ejemplo: `https://192.168.1.5:4200`)
+2. El navegador te lanzará una alerta roja gigante diciendo "La conexión no es privada" (porque es un certificado local).
+3. Haz clic en el botón **"Configuración Avanzada"** (Advanced) y luego haz clic en el enlace de abajo que dice **"Continuar a 192.168.X.X (inseguro)"**.
+4. ¡Listo! Dale clic al botón rojo de **Login** e ingresa con el usuario `owner`.
 
 ---
 
-## 🏛️ Diseño Multi-Tenant 
+## 🏛️ Resumen para la Sustentación (Diseño Multi-Tenant)
 
-1. **Aislamiento en Backend:** Django utiliza un Mixin llamado `GymIsolationMixin`. Cada petición que recibe saca el `gym_id` del token JWT e inyecta un filtro automático. Los modelos **no** tienen claves foráneas directas hacia un modelo `Gym`, cumpliendo la regla estricta de aislamiento.
-2. **Branding Dinámico en Frontend:** El componente `AppComponent` lee los colores y logos definidos en `environment.ts` e inyecta variables CSS en tiempo real (`document.documentElement.style.setProperty`).
-3. **Autenticación Standalone:** No hay `keycloak-angular`. Se utiliza `keycloak-js` nativo y un Interceptor manual (`auth.interceptor.ts`) que adjunta el `Bearer token` a todas las peticiones hacia Django (puerto 8000) y Node.js (puerto 3000).
+Si el profesor pregunta cómo logramos que el proyecto soporte múltiples gimnasios sin mezclar los datos:
 
+1. **Aislamiento en Backend (Filtro Invisible):** En Django programamos un `GymIsolationMixin`. Django toma el token JWT del usuario, extrae el `gym_id`, y lo inyecta obligatoriamente en todas las consultas a la base de datos de PostgreSQL. Los datos del gimnasio A jamás se mezclarán con los del B.
+2. **Branding Dinámico en Frontend:** Angular lee colores y textos desde el `environment.ts` y cambia las variables CSS en tiempo real con `document.documentElement.style.setProperty`. Esto permite cambiar la "fachada" según el gimnasio.
+3. **Seguridad Standalone sin atajos:** No usamos librerías de terceros perezosas como `keycloak-angular`. Implementamos `keycloak-js` nativo y construimos un `auth.interceptor.ts` 100% manual para propagar el Token JWT hacia los microservicios.
