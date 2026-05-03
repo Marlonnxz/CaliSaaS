@@ -1,0 +1,14 @@
+<h3>Crear Nuevo Gimnasio (Node.js API)</h3>
+<p>Este formulario enviará datos al futuro microservicio de Node.js en el puerto 3000.</p>
+
+<form [formGroup]="gymForm" (ngSubmit)="onSubmit()" style="display: flex; flex-direction: column; gap: 10px; max-width: 300px;">
+  <input type="text" formControlName="name" placeholder="Nombre del Gimnasio" style="padding: 8px;">
+  <input type="text" formControlName="slug" placeholder="Slug (ej. cali-saas)" style="padding: 8px;">
+  <button type="submit" [disabled]="!gymForm.valid" class="btn-primary">Crear en Node.js</button>
+</form>
+
+@if (mensaje) {
+  <div style="margin-top: 15px; padding: 10px; border: 1px solid #ccc; background-color: #f8d7da; color: #721c24;">
+    {{ mensaje }}
+  </div>
+}

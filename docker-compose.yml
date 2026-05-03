@@ -1,14 +1,14 @@
 services:
   # ==========================================
-  # 1. BASE DE DATOS
+  # 1. BASES DE DATOS
   # ==========================================
-  postgres-db:
+  db_rutinas_pg:
     image: postgres:15-alpine
-    container_name: calisaas_postgres
+    container_name: calisaas_db_rutinas
     environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: admin_db
-      POSTGRES_PASSWORD: password_db
+      POSTGRES_DB: rutinas_db
+      POSTGRES_USER: admin_pg
+      POSTGRES_PASSWORD: ${DB_PG_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -16,31 +16,59 @@ services:
     networks:
       - calisaas_network
 
+  db_usuarios_ora:
+    image: mysql:8.0
+    container_name: calisaas_db_usuarios
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: usuarios_db
+      MYSQL_USER: admin_mysql
+      MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - calisaas_network
+
+  db_auditoria_mongo:
+    image: mongo:6.0
+    container_name: calisaas_db_auditoria
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin_mongo
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGO_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - calisaas_network
+
   # ==========================================
-  # 2. KEYCLOAK (Con el Tema de CaliSaaS)
+  # 2. KEYCLOAK (Identidad)
   # ==========================================
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.0
     container_name: calisaas_keycloak
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-db:5432/keycloak
-      KC_DB_USERNAME: admin_db
-      KC_DB_PASSWORD: password_db
+      KC_DB_URL: jdbc:postgresql://db_rutinas_pg:5432/rutinas_db
+      KC_DB_USERNAME: admin_pg
+      KC_DB_PASSWORD: ${DB_PG_PASSWORD}
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     command: start-dev
     ports:
-      - "8080:8080"
+      - "8082:8080"
     volumes:
       - ./themes/calisaas:/opt/keycloak/themes/calisaas:ro
     depends_on:
-      - postgres-db
+      - db_rutinas_pg
     networks:
       - calisaas_network
 
   # ==========================================
-  # 3. ZOOKEEPER
+  # 3. MENSAJERÍA: ZOOKEEPER & KAFKA
   # ==========================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
@@ -51,9 +79,6 @@ services:
     networks:
       - calisaas_network
 
-  # ==========================================
-  # 4. KAFKA
-  # ==========================================
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: calisaas_kafka
@@ -64,7 +89,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP}:9092,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
@@ -73,7 +98,7 @@ services:
       - calisaas_network
 
   # ==========================================
-  # 5. KAFKA UI
+  # 4. KAFKA UI
   # ==========================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -89,37 +114,29 @@ services:
       - calisaas_network
 
   # ==========================================
-  # 6. FRONTEND (REACT)
+  # 5. MICROSERVICIO RUTINAS (DJANGO)
   # ==========================================
-  frontend:
-    build: ./frontend
-    container_name: calisaas_frontend
-    ports:
-      - "5173:80"
-    depends_on:
-      - keycloak
-    networks:
-      - calisaas_network
-
-  # ==========================================
-  # 7. BACKEND (DJANGO)
-  # ==========================================
-  backend:
-    build: ./backend
-    container_name: calisaas_backend
+  ms_rutinas_django:
+    build: ./ms_rutinas_django
+    container_name: calisaas_ms_rutinas_django
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ./backend:/app
+      - ./ms_rutinas_django:/app
     ports:
       - "8000:8000"
+    environment:
+      - HOST_IP=${HOST_IP}
     depends_on:
-      - postgres-db
+      - db_rutinas_pg
       - kafka
+      - keycloak
     networks:
       - calisaas_network
 
 volumes:
   postgres_data:
+  mysql_data:
+  mongo_data:
 
 networks:
   calisaas_network:

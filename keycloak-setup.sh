@@ -10,7 +10,7 @@ kcadm.sh create realms -s realm=CaliSaaS -s enabled=true || true
 # Create frontend client
 cat <<EOF > /tmp/frontend-client.json
 {
-  "clientId": "frontend-react",
+  "clientId": "angular-frontend",
   "publicClient": true,
   "redirectUris": ["*"],
   "webOrigins": ["*"],

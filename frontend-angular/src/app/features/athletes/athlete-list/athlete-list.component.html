@@ -1,0 +1,9 @@
+<h3>Listado de Atletas (Django API)</h3>
+<p>Mostrando los atletas que le pertenecen exclusivamente a tu gimnasio (Aislamiento MultiTenant):</p>
+<ul>
+  @for (athlete of athletes; track athlete.id) {
+    <li>{{ athlete.first_name }} {{ athlete.last_name }} - {{ athlete.weight }}kg</li>
+  } @empty {
+    <li>No hay atletas registrados en este Tenant o hubo un error.</li>
+  }
+</ul>

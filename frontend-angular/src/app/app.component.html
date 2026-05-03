@@ -1,0 +1,22 @@
+<header class="header">
+  <h2>{{ title }}</h2>
+  <nav>
+    @if (authService.isLoggedIn()) {
+      <button class="btn-primary" style="margin-right: 10px;" routerLink="/athletes">Atletas</button>
+      <button class="btn-primary" style="margin-right: 10px;" routerLink="/gyms/new">Crear Gimnasio</button>
+      <button class="btn-primary" (click)="logout()">Logout</button>
+    } @else {
+      <button class="btn-primary" (click)="login()">Login</button>
+    }
+  </nav>
+</header>
+<main style="padding: 20px;">
+  @if (authService.isLoggedIn()) {
+    <router-outlet></router-outlet>
+  } @else {
+    <div style="text-align: center; margin-top: 50px;">
+      <h2>Inicia sesión para continuar</h2>
+      <p>Este sistema está protegido por Keycloak y tokens JWT manuales.</p>
+    </div>
+  }
+</main>
