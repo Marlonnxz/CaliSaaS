@@ -1,10 +1,10 @@
 export const environment = {
-  production: true,
-  apiUrl: `http://${window.location.hostname}:3000/api`,
+  production: false,
+  apiUrl: `http://${window.location.hostname}:5000/api`,
   tenant: {
-    name: 'Default',
+    name: 'Gimnasio Norte',
     keycloakUrl: `http://${window.location.hostname}:8082`,
-    keycloakRealm: 'Default',
+    keycloakRealm: 'GimnasioNorte',
     keycloakClientId: 'angular-frontend'
   }
 };

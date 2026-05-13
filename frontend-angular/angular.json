@@ -55,6 +55,28 @@
                   "with": "src/environments/environment.development.ts"
                 }
               ]
+            },
+            "norte": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.norte.ts"
+                }
+              ]
+            },
+            "sur": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.sur.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -67,6 +89,12 @@
             },
             "development": {
               "buildTarget": "frontend-angular:build:development"
+            },
+            "norte": {
+              "buildTarget": "frontend-angular:build:norte"
+            },
+            "sur": {
+              "buildTarget": "frontend-angular:build:sur"
             }
           },
           "defaultConfiguration": "development"

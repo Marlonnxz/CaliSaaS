@@ -1,0 +1,34 @@
+<div class="portal-container">
+  <div class="welcome-banner">
+    <h2>¡Hola, Atleta! 👋</h2>
+    <p>Bienvenido a tu portal personal de entrenamiento. Aquí puedes consultar el catálogo de rutinas diseñadas exclusivamente para ti y para los miembros de tu gimnasio.</p>
+  </div>
+
+  <div class="routines-section">
+    <h3>🏋️‍♂️ Catálogo de Rutinas</h3>
+    
+    @if (loading) {
+      <div class="loading-spinner">Cargando tus rutinas...</div>
+    }
+
+    <div class="routines-grid">
+      @for (routine of routines; track routine.id) {
+        <div class="routine-card">
+          <div class="routine-header">
+            <h4>{{ routine.name }}</h4>
+            <span class="badge" [class]="'badge-' + routine.difficulty.toLowerCase()">
+              {{ routine.difficulty }}
+            </span>
+          </div>
+          <p class="routine-desc">{{ routine.description || 'Sin descripción detallada.' }}</p>
+          <button class="btn-start">Comenzar Entrenamiento</button>
+        </div>
+      }
+      @empty {
+        <div class="empty-state">
+          No hay rutinas disponibles en este momento. ¡Habla con tu entrenador!
+        </div>
+      }
+    </div>
+  </div>
+</div>

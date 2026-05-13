@@ -21,8 +21,7 @@ export class GymCreateComponent {
 
   onSubmit() {
     if (this.gymForm.valid) {
-      // Petición hacia el futuro microservicio de Node.js
-      this.http.post(`${environment.tenant.apiUrlNode}/gyms/`, this.gymForm.value)
+      this.http.post(`${environment.apiUrl}/gyms/`, this.gymForm.value)
         .subscribe({
           next: () => this.mensaje = 'Gimnasio creado en Node.js exitosamente',
           error: (err) => this.mensaje = `Fallo esperado (Node.js no está levantado en el puerto 3000): ${err.message}`

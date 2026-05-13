@@ -1,0 +1,17 @@
+<!-- Renderiza el panel administrativo si el rol es admin_gym -->
+@if (authService.isAdmin()) {
+  <app-athlete-list></app-athlete-list>
+}
+
+<!-- Renderiza el portal del cliente si el rol es atleta -->
+@if (authService.isAthlete()) {
+  <app-athlete-portal></app-athlete-portal>
+}
+
+<!-- Mensaje por si no tiene roles válidos -->
+@if (!authService.isAdmin() && !authService.isAthlete()) {
+  <div style="text-align: center; padding: 5rem;">
+    <h2>Acceso Denegado</h2>
+    <p>No tienes los permisos necesarios para ver esta plataforma. Contacta al administrador del gimnasio.</p>
+  </div>
+}

@@ -1,0 +1,2 @@
+[2026-05-13T03:18:53.469Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ATHLETE", "athlete_id": 1, "timestamp": "2026-05-13T03:18:53.443218"}
+[2026-05-13T03:19:05.426Z] {"tenant": "Gimnasio Norte", "action": "ROUTINE_ASSIGNED", "athlete_id": 1, "routine_id": "1", "timestamp": "2026-05-13T03:19:05.421927"}

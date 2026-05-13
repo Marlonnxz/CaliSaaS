@@ -1,22 +1,29 @@
 <header class="header">
-  <h2>{{ title }}</h2>
-  <nav>
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <div style="width: 32px; height: 32px; background: var(--primary-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+      C
+    </div>
+    <h2>{{ title }}</h2>
+  </div>
+  <nav class="header-nav">
     @if (authService.isLoggedIn()) {
-      <button class="btn-primary" style="margin-right: 10px;" routerLink="/athletes">Atletas</button>
-      <button class="btn-primary" style="margin-right: 10px;" routerLink="/gyms/new">Crear Gimnasio</button>
-      <button class="btn-primary" (click)="logout()">Logout</button>
+      <button class="btn btn-secondary" routerLink="/dashboard">Mi Panel</button>
+      <button class="btn btn-primary" (click)="logout()">Cerrar Sesión</button>
     } @else {
-      <button class="btn-primary" (click)="login()">Login</button>
+      <button class="btn btn-primary" (click)="login()">Iniciar Sesión</button>
     }
   </nav>
 </header>
-<main style="padding: 20px;">
+<main class="container">
   @if (authService.isLoggedIn()) {
     <router-outlet></router-outlet>
   } @else {
-    <div style="text-align: center; margin-top: 50px;">
-      <h2>Inicia sesión para continuar</h2>
-      <p>Este sistema está protegido por Keycloak y tokens JWT manuales.</p>
+    <div style="text-align: center; margin-top: 10vh; max-width: 600px; margin-left: auto; margin-right: auto; padding: 3rem; background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+      <h1 style="font-size: 2rem; margin-bottom: 1rem; color: var(--text-primary);">Bienvenido a {{ title }}</h1>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 1.125rem;">
+        Plataforma premium para la gestión integral de gimnasios. Accede para administrar tus atletas y rutinas.
+      </p>
+      <button class="btn btn-primary" style="font-size: 1.125rem; padding: 0.75rem 2rem;" (click)="login()">Ingresar al Sistema</button>
     </div>
   }
 </main>

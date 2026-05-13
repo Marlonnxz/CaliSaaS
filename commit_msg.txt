@@ -1,0 +1,16 @@
+🚀 Feat: Contenerización total y Portal de Atletas (RBAC)
+
+**¿Qué se hizo?**
+1. Migración a Docker Compose: Se crearon Dockerfiles para los backends (Python y Node), el consumidor de Kafka y el frontend en Angular. Se orquestaron 11 contenedores para garantizar que el proyecto sea 100% reproducible sin instalaciones locales.
+2. Aislamiento Físico Multi-Tenant: Se configuró PostgreSQL (Norte) y MySQL (Sur) corriendo independientemente.
+3. Control de Acceso (RBAC): Se decodificaron los JWT de Keycloak en Angular para separar las vistas entre 'dueño' (Dashboard administrativo) y 'atleta' (Catálogo de rutinas).
+4. Polyfill Criptográfico: Se inyectó soporte manual para Web Crypto API permitiendo el login de Keycloak en red local (LAN) usando HTTP.
+5. Limpieza de Repositorio: Se eliminaron guías locales antiguas y se pulió el README.md con instrucciones definitivas.
+
+**¿Por qué se hizo?**
+Para elevar el proyecto al estándar "Enterprise". Esto elimina el problema de "funciona en mi máquina" y asegura la máxima nota en la sustentación de Arquitectura de Software al demostrar despliegue en contenedores, seguridad centralizada y coreografía de microservicios asíncrona.
+
+**¿Qué se hará más adelante? (Roadmap)**
+1. Discutir con el profesor si es necesario un despliegue en la nube (AWS EC2 / S3) o si se presentará en Localhost.
+2. Analizar la viabilidad de agregar un API Gateway (Nginx/Kong) para centralizar peticiones.
+3. Posible adición de módulos menores (pagos/asistencia) si la rúbrica lo exige en las próximas 2 semanas.

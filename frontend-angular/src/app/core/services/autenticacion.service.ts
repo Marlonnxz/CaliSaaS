@@ -20,7 +20,8 @@ export class AutenticacionService {
     try {
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
-        checkLoginIframe: false // Evita errores de iframe en localhost/IPs sin SSL
+        checkLoginIframe: false, // Evita errores de iframe en localhost/IPs sin SSL
+        pkceMethod: false // Desactiva PKCE para que funcione en HTTP con IP
       });
 
       if (authenticated) {
@@ -43,7 +44,7 @@ export class AutenticacionService {
         // En lugar de depender de la promesa interna de keycloak.login(), 
         // generamos la URL y forzamos la redirección manualmente.
         const url = await this.keycloak.createLoginUrl({
-          redirectUri: window.location.origin + '/athletes'
+          redirectUri: window.location.origin + '/dashboard'
         });
         window.location.href = url;
       } catch (err) {
@@ -67,5 +68,26 @@ export class AutenticacionService {
 
   isLoggedIn(): boolean {
     return !!this.getToken();
+  }
+
+  getRoles(): string[] {
+    const token = this.getToken();
+    if (!token) return [];
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const decodedPayload = JSON.parse(atob(payloadBase64));
+      return decodedPayload?.realm_access?.roles || [];
+    } catch (e) {
+      console.error('Error decoding JWT for roles', e);
+      return [];
+    }
+  }
+
+  isAdmin(): boolean {
+    return this.getRoles().includes('admin_gym');
+  }
+
+  isAthlete(): boolean {
+    return this.getRoles().includes('atleta');
   }
 }

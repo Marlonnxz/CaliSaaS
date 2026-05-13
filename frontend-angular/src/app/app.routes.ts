@@ -1,9 +1,11 @@
 import { Routes } from '@angular/router';
 import { AthleteListComponent } from './features/athletes/athlete-list/athlete-list.component';
 import { GymCreateComponent } from './features/gyms/gym-create/gym-create.component';
+import { DashboardComponent } from './features/dashboard/dashboard.component';
 
 export const routes: Routes = [
+  { path: 'dashboard', component: DashboardComponent },
   { path: 'athletes', component: AthleteListComponent },
   { path: 'gyms/new', component: GymCreateComponent },
-  { path: '', redirectTo: '/athletes', pathMatch: 'full' }
+  { path: '', redirectTo: '/dashboard', pathMatch: 'full' }
 ];

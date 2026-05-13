@@ -1,0 +1,16 @@
+{
+  "name": "tenant-sur-node",
+  "version": "1.0.0",
+  "description": "Backend Node.js para Gimnasio Sur",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "mysql2": "^3.6.0"
+  }
+}

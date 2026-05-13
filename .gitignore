@@ -15,6 +15,11 @@ postgres_data/
 # Variables de entorno 
 .env
 
+# Node.js
+node_modules/
+dist/
+npm-debug.log
+
 # SO
 .DS_Store
 Thumbs.db

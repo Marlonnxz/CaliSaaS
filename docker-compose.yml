@@ -1,143 +1,173 @@
+version: '3.8'
+
 services:
-  # ==========================================
-  # 1. BASES DE DATOS
-  # ==========================================
-  db_rutinas_pg:
-    image: postgres:15-alpine
-    container_name: calisaas_db_rutinas
+  db_gimnasio_norte_pg:
+    image: postgres:15
+    container_name: db_gimnasio_norte_pg
     environment:
-      POSTGRES_DB: rutinas_db
-      POSTGRES_USER: admin_pg
-      POSTGRES_PASSWORD: ${DB_PG_PASSWORD}
+      POSTGRES_DB: gimnasio_norte
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     networks:
-      - calisaas_network
+      - shared_network
 
-  db_usuarios_ora:
+  db_gimnasio_sur_mysql:
     image: mysql:8.0
-    container_name: calisaas_db_usuarios
+    container_name: db_gimnasio_sur_mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: usuarios_db
-      MYSQL_USER: admin_mysql
-      MYSQL_PASSWORD: ${DB_MYSQL_PASSWORD}
+      MYSQL_DATABASE: gimnasio_sur
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
-      - calisaas_network
+      - shared_network
 
-  db_auditoria_mongo:
-    image: mongo:6.0
-    container_name: calisaas_db_auditoria
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin_mongo
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGO_PASSWORD}
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - calisaas_network
-
-  # ==========================================
-  # 2. KEYCLOAK (Identidad)
-  # ==========================================
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.0
-    container_name: calisaas_keycloak
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: keycloak
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://db_rutinas_pg:5432/rutinas_db
-      KC_DB_USERNAME: admin_pg
-      KC_DB_PASSWORD: ${DB_PG_PASSWORD}
+      KC_DB_URL: jdbc:postgresql://db_gimnasio_norte_pg:5432/gimnasio_norte
+      KC_DB_USERNAME: user
+      KC_DB_PASSWORD: password
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_PASSWORD: admin
     command: start-dev
     ports:
       - "8082:8080"
-    volumes:
-      - ./themes/calisaas:/opt/keycloak/themes/calisaas:ro
     depends_on:
-      - db_rutinas_pg
+      - db_gimnasio_norte_pg
     networks:
-      - calisaas_network
+      - shared_network
 
-  # ==========================================
-  # 3. MENSAJERÍA: ZOOKEEPER & KAFKA
-  # ==========================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
-    container_name: calisaas_zookeeper
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
     networks:
-      - calisaas_network
+      - shared_network
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    container_name: calisaas_kafka
+    container_name: kafka
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP}:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://${HOST_IP:-localhost}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
-      - calisaas_network
+      - shared_network
 
-  # ==========================================
-  # 4. KAFKA UI
-  # ==========================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    container_name: calisaas_kafka_ui
-    depends_on:
-      - kafka
+    container_name: kafka-ui
     ports:
       - "8083:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-    networks:
-      - calisaas_network
-
-  # ==========================================
-  # 5. MICROSERVICIO RUTINAS (DJANGO)
-  # ==========================================
-  ms_rutinas_django:
-    build: ./ms_rutinas_django
-    container_name: calisaas_ms_rutinas_django
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - ./ms_rutinas_django:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - HOST_IP=${HOST_IP}
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     depends_on:
-      - db_rutinas_pg
       - kafka
-      - keycloak
     networks:
-      - calisaas_network
+      - shared_network
 
-volumes:
-  postgres_data:
-  mysql_data:
-  mongo_data:
+  api_norte:
+    build:
+      context: ./tenant_norte_python
+    container_name: api_norte
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=db_gimnasio_norte_pg
+      - DB_PORT=5432
+      - DB_NAME=gimnasio_norte
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - KAFKA_BROKER=kafka:29092
+    depends_on:
+      - db_gimnasio_norte_pg
+      - kafka
+    networks:
+      - shared_network
+
+  api_sur:
+    build:
+      context: ./tenant_sur_node
+    container_name: api_sur
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db_gimnasio_sur_mysql
+      - DB_PORT=3306
+      - DB_NAME=gimnasio_sur
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - KAFKA_BROKER=kafka:29092
+    depends_on:
+      - db_gimnasio_sur_mysql
+      - kafka
+    networks:
+      - shared_network
+
+  auditoria:
+    build:
+      context: ./ms_auditoria_simple
+    container_name: auditoria
+    environment:
+      - KAFKA_BROKER=kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - shared_network
+    volumes:
+      - ./ms_auditoria_simple/auditoria.log:/app/auditoria.log
+
+  frontend_norte:
+    build:
+      context: ./frontend-angular
+      args:
+        - TENANT_CONFIG=norte
+    container_name: frontend_norte
+    ports:
+      - "4200:4200"
+    networks:
+      - shared_network
+
+  frontend_sur:
+    build:
+      context: ./frontend-angular
+      args:
+        - TENANT_CONFIG=sur
+    container_name: frontend_sur
+    ports:
+      - "4201:4200"
+    networks:
+      - shared_network
 
 networks:
-  calisaas_network:
+  shared_network:
     driver: bridge
+
+volumes:
+  pg_data:
+  mysql_data:
