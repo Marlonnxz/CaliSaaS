@@ -1,6 +1,7 @@
 <header class="header">
   <div style="display: flex; align-items: center; gap: 10px;">
-    <div style="width: 32px; height: 32px; background: var(--primary-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+    <img [src]="logoUrl" alt="Logo Gimnasio" style="height: 40px; border-radius: 8px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+    <div style="display: none; width: 32px; height: 32px; background: var(--primary-color); border-radius: 8px; align-items: center; justify-content: center; color: white; font-weight: bold;">
       C
     </div>
     <h2>{{ title }}</h2>

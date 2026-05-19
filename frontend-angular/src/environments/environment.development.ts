@@ -1,10 +1,10 @@
 export const environment = {
   production: false,
-  apiUrl: `http://${window.location.hostname}:3000/api`,
+  apiUrl: `http://${window.location.hostname}:5000/api`, // Default API, will be overridden by interceptor
   tenant: {
-    name: 'Default Dev',
+    name: 'CaliSaaS Gym Network',
     keycloakUrl: `http://${window.location.hostname}:8082`,
-    keycloakRealm: 'Default',
+    keycloakRealm: 'CaliSaaS',
     keycloakClientId: 'angular-frontend'
   }
 };

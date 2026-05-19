@@ -5,12 +5,12 @@ export PATH=$PATH:/opt/keycloak/bin
 kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
 
 # =========================================
-# REALM: GimnasioNorte
+# REALM: CaliSaaS (Centralizado)
 # =========================================
-kcadm.sh create realms -s realm=GimnasioNorte -s enabled=true || true
+kcadm.sh create realms -s realm=CaliSaaS -s enabled=true || true
 
-# Cliente Frontend Norte
-cat <<EOF > /tmp/norte-frontend-client.json
+# Cliente Frontend Unificado
+cat <<EOF > /tmp/frontend-client.json
 {
   "clientId": "angular-frontend",
   "publicClient": true,
@@ -19,73 +19,52 @@ cat <<EOF > /tmp/norte-frontend-client.json
   "directAccessGrantsEnabled": true
 }
 EOF
-kcadm.sh create clients -r GimnasioNorte -f /tmp/norte-frontend-client.json
+kcadm.sh create clients -r CaliSaaS -f /tmp/frontend-client.json
 
-# Cliente Backend Norte
-cat <<EOF > /tmp/norte-backend-client.json
+# Cliente Backend Unificado (Para validaciones si se requiere)
+cat <<EOF > /tmp/backend-client.json
 {
   "clientId": "backend-client",
-  "secret": "secret-norte",
+  "secret": "secret-calisaas",
   "serviceAccountsEnabled": true,
   "publicClient": false,
   "directAccessGrantsEnabled": true
 }
 EOF
-kcadm.sh create clients -r GimnasioNorte -f /tmp/norte-backend-client.json
+kcadm.sh create clients -r CaliSaaS -f /tmp/backend-client.json
 
-# Roles Norte
-kcadm.sh create roles -r GimnasioNorte -s name=admin_gym || true
-kcadm.sh create roles -r GimnasioNorte -s name=atleta || true
+# Roles de Negocio
+kcadm.sh create roles -r CaliSaaS -s name=admin_gym || true
+kcadm.sh create roles -r CaliSaaS -s name=atleta || true
 
-# Usuarios Norte
-kcadm.sh create users -r GimnasioNorte -s username=owner_norte -s enabled=true
-kcadm.sh set-password -r GimnasioNorte --username owner_norte --new-password owner
-kcadm.sh add-roles -r GimnasioNorte --uusername owner_norte --rolename admin_gym
-
-kcadm.sh create users -r GimnasioNorte -s username=atleta_norte -s enabled=true
-kcadm.sh set-password -r GimnasioNorte --username atleta_norte --new-password atleta
-kcadm.sh add-roles -r GimnasioNorte --uusername atleta_norte --rolename atleta
+# Roles de Tenant (Inquilino) - ¡Clave para el enrutamiento dinámico!
+kcadm.sh create roles -r CaliSaaS -s name=tenant_norte || true
+kcadm.sh create roles -r CaliSaaS -s name=tenant_sur || true
 
 # =========================================
-# REALM: GimnasioSur
+# USUARIOS NORTE
 # =========================================
-kcadm.sh create realms -s realm=GimnasioSur -s enabled=true || true
+kcadm.sh create users -r CaliSaaS -s username=owner_norte -s enabled=true
+kcadm.sh set-password -r CaliSaaS --username owner_norte --new-password owner
+kcadm.sh add-roles -r CaliSaaS --uusername owner_norte --rolename admin_gym
+kcadm.sh add-roles -r CaliSaaS --uusername owner_norte --rolename tenant_norte
 
-# Cliente Frontend Sur
-cat <<EOF > /tmp/sur-frontend-client.json
-{
-  "clientId": "angular-frontend",
-  "publicClient": true,
-  "redirectUris": ["*"],
-  "webOrigins": ["*"],
-  "directAccessGrantsEnabled": true
-}
-EOF
-kcadm.sh create clients -r GimnasioSur -f /tmp/sur-frontend-client.json
+kcadm.sh create users -r CaliSaaS -s username=atleta_norte -s enabled=true
+kcadm.sh set-password -r CaliSaaS --username atleta_norte --new-password atleta
+kcadm.sh add-roles -r CaliSaaS --uusername atleta_norte --rolename atleta
+kcadm.sh add-roles -r CaliSaaS --uusername atleta_norte --rolename tenant_norte
 
-# Cliente Backend Sur
-cat <<EOF > /tmp/sur-backend-client.json
-{
-  "clientId": "backend-client",
-  "secret": "secret-sur",
-  "serviceAccountsEnabled": true,
-  "publicClient": false,
-  "directAccessGrantsEnabled": true
-}
-EOF
-kcadm.sh create clients -r GimnasioSur -f /tmp/sur-backend-client.json
+# =========================================
+# USUARIOS SUR
+# =========================================
+kcadm.sh create users -r CaliSaaS -s username=owner_sur -s enabled=true
+kcadm.sh set-password -r CaliSaaS --username owner_sur --new-password owner
+kcadm.sh add-roles -r CaliSaaS --uusername owner_sur --rolename admin_gym
+kcadm.sh add-roles -r CaliSaaS --uusername owner_sur --rolename tenant_sur
 
-# Roles Sur
-kcadm.sh create roles -r GimnasioSur -s name=admin_gym || true
-kcadm.sh create roles -r GimnasioSur -s name=atleta || true
+kcadm.sh create users -r CaliSaaS -s username=atleta_sur -s enabled=true
+kcadm.sh set-password -r CaliSaaS --username atleta_sur --new-password atleta
+kcadm.sh add-roles -r CaliSaaS --uusername atleta_sur --rolename atleta
+kcadm.sh add-roles -r CaliSaaS --uusername atleta_sur --rolename tenant_sur
 
-# Usuarios Sur
-kcadm.sh create users -r GimnasioSur -s username=owner_sur -s enabled=true
-kcadm.sh set-password -r GimnasioSur --username owner_sur --new-password owner
-kcadm.sh add-roles -r GimnasioSur --uusername owner_sur --rolename admin_gym
-
-kcadm.sh create users -r GimnasioSur -s username=atleta_sur -s enabled=true
-kcadm.sh set-password -r GimnasioSur --username atleta_sur --new-password atleta
-kcadm.sh add-roles -r GimnasioSur --uusername atleta_sur --rolename atleta
-
-echo "Keycloak setup for GimnasioNorte and GimnasioSur finished successfully."
+echo "Keycloak setup for Centralized CaliSaaS finished successfully."

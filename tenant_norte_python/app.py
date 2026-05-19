@@ -43,9 +43,11 @@ def init_db():
             first_name VARCHAR(255) NOT NULL,
             last_name VARCHAR(255) NOT NULL,
             weight FLOAT,
-            height FLOAT
+            height FLOAT,
+            keycloak_username VARCHAR(255)
         )
     ''')
+    cur.execute('ALTER TABLE Athlete ADD COLUMN IF NOT EXISTS keycloak_username VARCHAR(255);')
     cur.execute('''
         CREATE TABLE IF NOT EXISTS Routine (
             id SERIAL PRIMARY KEY,
@@ -69,6 +71,8 @@ def init_db():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return jsonify({'message': 'OK'}), 200
         auth_header = request.headers.get('Authorization')
         if not auth_header:
             return jsonify({'message': 'Token is missing!'}), 401
@@ -80,7 +84,7 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-@app.route('/api/athletes', methods=['GET'])
+@app.route('/api/athletes', methods=['GET', 'OPTIONS'])
 @token_required
 def get_athletes():
     conn = get_db_connection()
@@ -94,9 +98,33 @@ def get_athletes():
         cur.close()
         conn.close()
 
-@app.route('/api/athletes', methods=['POST'])
+@app.route('/api/audit/login', methods=['POST', 'OPTIONS'])
+@token_required
+def audit_login():
+    """
+    Endpoint de auditoría que registra en Kafka los inicios de sesión exitosos.
+    El nombre de usuario se extrae del JWT validado.
+    """
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(" ")[1] if len(auth_header.split(" ")) > 1 else auth_header
+    data = jwt.decode(token, options={"verify_signature": False})
+    
+    username = data.get('preferred_username', 'Unknown')
+    producer.send('auditoria.gyms', {
+        'action': 'USER_LOGIN',
+        'tenant': 'Gimnasio Norte',
+        'user': username,
+        'timestamp': datetime.now().isoformat()
+    })
+    return jsonify({'status': 'logged'}), 200
+
+@app.route('/api/athletes', methods=['POST', 'OPTIONS'])
 @token_required
 def create_athlete():
+    """
+    Crea un nuevo expediente físico de atleta en la base de datos PostgreSQL.
+    Registra el evento de creación en Kafka para el control de auditoría global.
+    """
     data = request.json
     if not data or 'first_name' not in data or 'last_name' not in data:
         return jsonify({'error': 'first_name and last_name are required'}), 400
@@ -104,8 +132,8 @@ def create_athlete():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            'INSERT INTO Athlete (first_name, last_name, weight, height) VALUES (%s, %s, %s, %s) RETURNING id',
-            (data['first_name'], data['last_name'], data.get('weight'), data.get('height'))
+            'INSERT INTO Athlete (first_name, last_name, weight, height, keycloak_username) VALUES (%s, %s, %s, %s, %s) RETURNING id',
+            (data['first_name'], data['last_name'], data.get('weight'), data.get('height'), data.get('keycloak_username'))
         )
         athlete_id = cur.fetchone()[0]
         conn.commit()
@@ -126,9 +154,44 @@ def create_athlete():
         if 'cur' in locals(): cur.close()
         if 'conn' in locals(): conn.close()
 
-@app.route('/api/routines', methods=['GET'])
+@app.route('/api/athletes/<int:athlete_id>', methods=['DELETE', 'OPTIONS'])
+@token_required
+def delete_athlete(athlete_id):
+    """
+    Elimina físicamente el registro de un atleta y todas sus asignaciones asociadas.
+    Emite un evento de eliminación a Kafka para mantener la trazabilidad de los datos.
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('DELETE FROM AthleteRoutine WHERE athlete_id = %s', (athlete_id,))
+        cur.execute('DELETE FROM Athlete WHERE id = %s', (athlete_id,))
+        conn.commit()
+
+        if producer:
+            producer.send('auditoria.gyms', {
+                'tenant': 'Gimnasio Norte',
+                'action': 'DELETE_ATHLETE',
+                'athlete_id': athlete_id,
+                'timestamp': datetime.now().isoformat()
+            })
+            producer.flush()
+
+        return jsonify({'message': 'Athlete deleted successfully'}), 200
+    except Exception as e:
+        if 'conn' in locals(): conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'cur' in locals(): cur.close()
+        if 'conn' in locals(): conn.close()
+
+@app.route('/api/routines', methods=['GET', 'OPTIONS'])
 @token_required
 def get_routines():
+    """
+    Devuelve el catálogo global de rutinas disponibles en el tenant actual.
+    Utilizado por ambos roles (Administrador y Cliente) para consultar la oferta deportiva.
+    """
     conn = get_db_connection()
     cur = conn.cursor()
     try:
@@ -140,9 +203,12 @@ def get_routines():
         cur.close()
         conn.close()
 
-@app.route('/api/routines', methods=['POST'])
+@app.route('/api/routines', methods=['POST', 'OPTIONS'])
 @token_required
 def create_routine():
+    """
+    Añade una nueva rutina al catálogo global y reporta la creación a Kafka.
+    """
     data = request.json
     if not data or 'name' not in data:
         return jsonify({'error': 'name is required'}), 400
@@ -153,6 +219,16 @@ def create_routine():
                     (data['name'], data.get('description'), data.get('difficulty')))
         routine_id = cur.fetchone()[0]
         conn.commit()
+
+        if producer:
+            producer.send('auditoria.gyms', {
+                'tenant': 'Gimnasio Norte',
+                'action': 'CREATE_ROUTINE',
+                'routine_name': data['name'],
+                'timestamp': datetime.now().isoformat()
+            })
+            producer.flush()
+
         return jsonify({'message': 'Routine created successfully', 'id': routine_id}), 201
     except Exception as e:
         conn.rollback()
@@ -161,36 +237,62 @@ def create_routine():
         cur.close()
         conn.close()
 
-@app.route('/api/athletes/<int:athlete_id>/routines', methods=['POST'])
+@app.route('/api/routines/<int:routine_id>', methods=['DELETE', 'OPTIONS'])
 @token_required
-def assign_routine(athlete_id):
-    data = request.json
-    if not data or 'routine_id' not in data:
-        return jsonify({'error': 'routine_id is required'}), 400
-    conn = get_db_connection()
-    cur = conn.cursor()
+def delete_routine(routine_id):
+    """
+    Elimina una rutina del catálogo. Incluye borrado en cascada manual de las asignaciones existentes.
+    Reporta la eliminación al broker de Kafka.
+    """
     try:
-        cur.execute('INSERT INTO AthleteRoutine (athlete_id, routine_id) VALUES (%s, %s) RETURNING id',
-                    (athlete_id, data['routine_id']))
-        assignment_id = cur.fetchone()[0]
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('DELETE FROM AthleteRoutine WHERE routine_id = %s', (routine_id,))
+        cur.execute('DELETE FROM Routine WHERE id = %s', (routine_id,))
         conn.commit()
+
         if producer:
             producer.send('auditoria.gyms', {
                 'tenant': 'Gimnasio Norte',
-                'action': 'ROUTINE_ASSIGNED',
-                'athlete_id': athlete_id,
-                'routine_id': data['routine_id'],
-                'timestamp': datetime.utcnow().isoformat()
+                'action': 'DELETE_ROUTINE',
+                'routine_id': routine_id,
+                'timestamp': datetime.now().isoformat()
             })
             producer.flush()
-        return jsonify({'message': 'Routine assigned successfully', 'id': assignment_id}), 201
+
+        return jsonify({'message': 'Routine deleted successfully'}), 200
     except Exception as e:
-        conn.rollback()
+        if 'conn' in locals(): conn.rollback()
         return jsonify({'error': str(e)}), 500
     finally:
-        cur.close()
-        conn.close()
+        if 'cur' in locals(): cur.close()
+        if 'conn' in locals(): conn.close()
 
+@app.route('/api/audit/training', methods=['POST', 'OPTIONS'])
+@token_required
+def audit_training():
+    """
+    Registra en el log de auditoría (Kafka) cuando un atleta inicia un entrenamiento.
+    Extrae la rutina del cuerpo de la petición y el usuario del token JWT.
+    """
+    req_data = request.json
+    routine_name = req_data.get('routine_name', 'Unknown Routine') if req_data else 'Unknown Routine'
+    
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(" ")[1] if len(auth_header.split(" ")) > 1 else auth_header
+    jwt_data = jwt.decode(token, options={"verify_signature": False})
+    username = jwt_data.get('preferred_username', 'Unknown')
+    
+    if producer:
+        producer.send('auditoria.gyms', {
+            'action': 'TRAINING_STARTED',
+            'tenant': 'Gimnasio Norte',
+            'user': username,
+            'routine': routine_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        producer.flush()
+    return jsonify({'status': 'training_logged'}), 200
 if __name__ == '__main__':
     try:
         init_db()

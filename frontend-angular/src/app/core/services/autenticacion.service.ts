@@ -10,6 +10,11 @@ export class AutenticacionService {
 
   constructor() {}
 
+  /**
+   * Inicializa la configuración dinámica del cliente de Keycloak según el entorno (Tenant).
+   * Determina si hay una sesión activa y almacena el token JWT de forma segura.
+   * @returns {Promise<boolean>} Retorna true si el usuario está autenticado en el sistema.
+   */
   async init(): Promise<boolean> {
     this.keycloak = new Keycloak({
       url: environment.tenant.keycloakUrl,
@@ -38,6 +43,10 @@ export class AutenticacionService {
     }
   }
 
+  /**
+   * Genera dinámicamente la URL de inicio de sesión hacia el servidor Keycloak centralizado.
+   * Redirige al usuario al flujo de autenticación estándar OIDC.
+   */
   async login() {
     if (this.keycloak) {
       try {
@@ -55,6 +64,10 @@ export class AutenticacionService {
     }
   }
 
+  /**
+   * Cierra la sesión activa borrando los tokens locales e invocando el logout de Keycloak.
+   * Redirige a la página principal de la plataforma.
+   */
   logout() {
     if (this.keycloak) {
       this.keycloak.logout({ redirectUri: window.location.origin });
@@ -66,10 +79,16 @@ export class AutenticacionService {
     return localStorage.getItem('auth_token');
   }
 
+  /**
+   * Verifica la existencia y disponibilidad de la instancia de Keycloak y su sesión.
+   */
   isLoggedIn(): boolean {
     return !!this.getToken();
   }
 
+  /**
+   * Examina la firma decodificada del JWT para extraer los roles de acceso del usuario (RBAC).
+   */
   getRoles(): string[] {
     const token = this.getToken();
     if (!token) return [];
@@ -89,5 +108,12 @@ export class AutenticacionService {
 
   isAthlete(): boolean {
     return this.getRoles().includes('atleta');
+  }
+
+  getTenant(): 'norte' | 'sur' | null {
+    const roles = this.getRoles();
+    if (roles.includes('tenant_norte')) return 'norte';
+    if (roles.includes('tenant_sur')) return 'sur';
+    return null;
   }
 }

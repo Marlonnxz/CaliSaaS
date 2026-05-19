@@ -47,6 +47,9 @@ export class AthleteListComponent implements OnInit {
     this.loadRoutines();
   }
 
+  /**
+   * Carga la lista global de atletas desde el backend actual (Norte o Sur).
+   */
   loadAthletes() {
     this.loadingAthletes = true;
     this.http.get<Athlete[]>(`${environment.apiUrl}/athletes`)
@@ -62,6 +65,9 @@ export class AthleteListComponent implements OnInit {
       });
   }
 
+  /**
+   * Carga el catálogo global de rutinas.
+   */
   loadRoutines() {
     this.loadingRoutines = true;
     this.http.get<Routine[]>(`${environment.apiUrl}/routines`)
@@ -77,6 +83,9 @@ export class AthleteListComponent implements OnInit {
       });
   }
 
+  /**
+   * Envía el formulario para crear un nuevo atleta en la base de datos física.
+   */
   createAthlete() {
     if (!this.newAthlete.first_name || !this.newAthlete.last_name) return;
     this.submittingAthlete = true;
@@ -94,6 +103,22 @@ export class AthleteListComponent implements OnInit {
       });
   }
 
+  /**
+   * Elimina un atleta del sistema tras confirmación del usuario.
+   */
+  deleteAthlete(id: number) {
+    if (confirm('¿Estás seguro de eliminar este atleta? Esta acción no se puede deshacer.')) {
+      this.http.delete(`${environment.apiUrl}/athletes/${id}`)
+        .subscribe({
+          next: () => this.loadAthletes(),
+          error: (err) => console.error('Error deleting athlete', err)
+        });
+    }
+  }
+
+  /**
+   * Crea una nueva rutina y la añade al catálogo global.
+   */
   createRoutine() {
     if (!this.newRoutine.name) return;
     this.submittingRoutine = true;
@@ -111,16 +136,16 @@ export class AthleteListComponent implements OnInit {
       });
   }
 
-  assignRoutine(athleteId: number) {
-    if (!this.selectedRoutineId) return;
-    this.http.post(`${environment.apiUrl}/athletes/${athleteId}/routines`, { routine_id: this.selectedRoutineId })
-      .subscribe({
-        next: () => {
-          alert('Rutina asignada exitosamente (El evento se emitió a Kafka)');
-          this.selectedAthleteForRoutine = null;
-          this.selectedRoutineId = null;
-        },
-        error: (err) => console.error('Error assigning routine', err)
-      });
+  /**
+   * Elimina una rutina del catálogo tras confirmación.
+   */
+  deleteRoutine(routineId: number) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta rutina? Esto la quitará de los entrenamientos de todos los atletas.')) {
+      this.http.delete(`${environment.apiUrl}/routines/${routineId}`)
+        .subscribe({
+          next: () => this.loadRoutines(),
+          error: (err) => console.error('Error deleting routine', err)
+        });
+    }
   }
 }

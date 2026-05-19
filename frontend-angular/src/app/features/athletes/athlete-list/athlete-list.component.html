@@ -12,29 +12,32 @@
       
       <!-- Create Athlete Card -->
       <div class="card">
-        <h3 class="card-title">Nuevo Atleta</h3>
-        <form (submit)="createAthlete(); $event.preventDefault()">
+        <h3 class="card-title" style="margin-bottom: 0.25rem;">Ficha Técnica Deportiva</h3>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0; margin-bottom: 1rem; line-height: 1.3;">
+          * Crea el expediente físico en la base de datos. Para otorgar acceso al sistema, el usuario debe crearse en Keycloak.
+        </p>
+        <form #athleteForm="ngForm" (ngSubmit)="createAthlete()">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Nombre</label>
-              <input type="text" class="form-control" [(ngModel)]="newAthlete.first_name" name="first_name" required placeholder="Ej. Juan">
+              <input type="text" class="form-control" [(ngModel)]="newAthlete.first_name" name="first_name" required minlength="2" placeholder="Ej. Juan" #firstName="ngModel" [class.is-invalid]="firstName.invalid && firstName.touched">
             </div>
             <div class="form-group">
               <label class="form-label">Apellido</label>
-              <input type="text" class="form-control" [(ngModel)]="newAthlete.last_name" name="last_name" required placeholder="Ej. Pérez">
+              <input type="text" class="form-control" [(ngModel)]="newAthlete.last_name" name="last_name" required minlength="2" placeholder="Ej. Pérez" #lastName="ngModel" [class.is-invalid]="lastName.invalid && lastName.touched">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Peso (kg)</label>
-              <input type="number" class="form-control" [(ngModel)]="newAthlete.weight" name="weight" placeholder="70.5">
+              <input type="number" class="form-control" [(ngModel)]="newAthlete.weight" name="weight" required min="30" max="300" placeholder="70.5" #weight="ngModel" [class.is-invalid]="weight.invalid && weight.touched">
             </div>
             <div class="form-group">
               <label class="form-label">Altura (cm)</label>
-              <input type="number" class="form-control" [(ngModel)]="newAthlete.height" name="height" placeholder="175">
+              <input type="number" class="form-control" [(ngModel)]="newAthlete.height" name="height" required min="100" max="250" placeholder="175" #height="ngModel" [class.is-invalid]="height.invalid && height.touched">
             </div>
           </div>
-          <button type="submit" class="btn btn-primary w-100" [disabled]="submittingAthlete">
+          <button type="submit" class="btn btn-primary w-100" [disabled]="athleteForm.invalid || submittingAthlete">
             {{ submittingAthlete ? 'Creando...' : 'Registrar Atleta' }}
           </button>
         </form>
@@ -43,10 +46,10 @@
       <!-- Create Routine Card -->
       <div class="card mt-4">
         <h3 class="card-title">Nueva Rutina</h3>
-        <form (submit)="createRoutine(); $event.preventDefault()">
+        <form #routineForm="ngForm" (ngSubmit)="createRoutine()">
           <div class="form-group">
             <label class="form-label">Nombre de Rutina</label>
-            <input type="text" class="form-control" [(ngModel)]="newRoutine.name" name="r_name" required placeholder="Ej. Hipertrofia Full Body">
+            <input type="text" class="form-control" [(ngModel)]="newRoutine.name" name="r_name" required minlength="3" placeholder="Ej. Hipertrofia Full Body" #rName="ngModel" [class.is-invalid]="rName.invalid && rName.touched">
           </div>
           <div class="form-group">
             <label class="form-label">Descripción</label>
@@ -54,13 +57,13 @@
           </div>
           <div class="form-group">
             <label class="form-label">Dificultad</label>
-            <select class="form-control" [(ngModel)]="newRoutine.difficulty" name="r_diff">
+            <select class="form-control" [(ngModel)]="newRoutine.difficulty" name="r_diff" required>
               <option value="Baja">Baja</option>
               <option value="Media">Media</option>
               <option value="Alta">Alta</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-primary w-100" [disabled]="submittingRoutine">
+          <button type="submit" class="btn btn-primary w-100" [disabled]="routineForm.invalid || submittingRoutine">
             {{ submittingRoutine ? 'Creando...' : 'Crear Rutina' }}
           </button>
         </form>
@@ -88,24 +91,7 @@
               </div>
               
               <div class="athlete-actions">
-                @if (selectedAthleteForRoutine === athlete.id) {
-                  <div class="assign-panel">
-                    <select class="form-control mb-2" [(ngModel)]="selectedRoutineId">
-                      <option [ngValue]="null" disabled>Selecciona una rutina...</option>
-                      @for (routine of routines; track routine.id) {
-                        <option [value]="routine.id">{{ routine.name }} ({{ routine.difficulty }})</option>
-                      }
-                    </select>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-primary flex-1" (click)="assignRoutine(athlete.id)" [disabled]="!selectedRoutineId">Asignar</button>
-                      <button class="btn btn-secondary flex-1" (click)="selectedAthleteForRoutine = null">Cancelar</button>
-                    </div>
-                  </div>
-                } @else {
-                  <button class="btn btn-secondary w-100" (click)="selectedAthleteForRoutine = athlete.id; selectedRoutineId = null">
-                    + Asignar Rutina
-                  </button>
-                }
+                <button class="btn" style="background-color: #fee2e2; color: #991b1b; width: 100%; border: 1px solid #fca5a5;" (click)="deleteAthlete(athlete.id)">Eliminar Atleta</button>
               </div>
             </div>
           } @empty {
@@ -134,7 +120,8 @@
                   {{ routine.difficulty }}
                 </span>
               </div>
-              <p class="routine-desc m-0">{{ routine.description }}</p>
+              <p class="routine-desc m-0" style="margin-bottom: 1rem;">{{ routine.description }}</p>
+              <button class="btn" style="background-color: #fee2e2; color: #991b1b; width: 100%; border: 1px solid #fca5a5; font-size: 0.8rem; padding: 0.4rem;" (click)="deleteRoutine(routine.id)">Eliminar Rutina</button>
             </div>
           } @empty {
             <div class="empty-state card">

@@ -57,9 +57,16 @@ const initDb = async () => {
       first_name VARCHAR(255) NOT NULL,
       last_name VARCHAR(255) NOT NULL,
       weight FLOAT,
-      height FLOAT
+      height FLOAT,
+      keycloak_username VARCHAR(255)
     )
   `);
+  
+  try {
+    await pool.query('ALTER TABLE Athlete ADD COLUMN keycloak_username VARCHAR(255)');
+  } catch (e) {
+    // Ignore if column already exists
+  }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS Routine (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -82,14 +89,42 @@ const initDb = async () => {
 initDb().catch(console.error);
 
 // Endpoints Athlete
+/**
+ * Endpoint de auditoría.
+ * Registra en Kafka (tópico 'auditoria.gyms') cuando un usuario inicia sesión correctamente.
+ */
+app.post('/api/audit/login', authenticateToken, async (req, res) => {
+    const username = req.user.preferred_username || 'Unknown';
+    try {
+        await producer.send({
+            topic: 'auditoria.gyms',
+            messages: [{
+                value: JSON.stringify({
+                    tenant: 'Gimnasio Sur',
+                    action: 'USER_LOGIN',
+                    user: username,
+                    timestamp: new Date().toISOString()
+                })
+            }]
+        });
+        res.json({ status: 'logged' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * Crea un nuevo expediente físico de atleta en la base de datos MySQL.
+ * Posteriormente, emite un evento CREATE_ATHLETE hacia el cluster de Kafka.
+ */
 app.post('/api/athletes', authenticateToken, async (req, res) => {
-  const { first_name, last_name, weight, height } = req.body;
+  const { first_name, last_name, weight, height, keycloak_username } = req.body;
   if (!first_name || !last_name) return res.status(400).json({ error: 'first_name and last_name are required' });
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO Athlete (first_name, last_name, weight, height) VALUES (?, ?, ?, ?)',
-      [first_name, last_name, weight || null, height || null]
+      'INSERT INTO Athlete (first_name, last_name, weight, height, keycloak_username) VALUES (?, ?, ?, ?, ?)',
+      [first_name, last_name, weight || null, height || null, keycloak_username || null]
     );
     const athleteId = result.insertId;
 
@@ -110,6 +145,33 @@ app.post('/api/athletes', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * Elimina físicamente el registro de un atleta y purga sus asignaciones en cascada.
+ * Reporta la eliminación a Kafka para mantener la sincronización de auditoría.
+ */
+app.delete('/api/athletes/:id', authenticateToken, async (req, res) => {
+  const athleteId = req.params.id;
+  try {
+    await pool.query('DELETE FROM AthleteRoutine WHERE athlete_id = ?', [athleteId]);
+    await pool.query('DELETE FROM Athlete WHERE id = ?', [athleteId]);
+
+    await producer.send({
+      topic: 'auditoria.gyms',
+      messages: [{ value: JSON.stringify({
+        tenant: 'Gimnasio Sur',
+        action: 'DELETE_ATHLETE',
+        athlete_id: athleteId,
+        timestamp: new Date().toISOString()
+      })}]
+    });
+
+    res.status(200).json({ message: 'Athlete deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.get('/api/athletes', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Athlete');
@@ -120,6 +182,10 @@ app.get('/api/athletes', authenticateToken, async (req, res) => {
 });
 
 // Endpoints Routine
+/**
+ * Retorna el catálogo global de rutinas disponibles en la plataforma.
+ * Accesible tanto para la vista de administración como para el portal de atletas.
+ */
 app.get('/api/routines', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Routine');
@@ -129,6 +195,10 @@ app.get('/api/routines', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * Añade una nueva rutina al catálogo global.
+ * Reporta la creación (CREATE_ROUTINE) al log centralizado de Kafka.
+ */
 app.post('/api/routines', authenticateToken, async (req, res) => {
   const { name, description, difficulty } = req.body;
   if (!name) return res.status(400).json({ error: 'name is required' });
@@ -138,35 +208,70 @@ app.post('/api/routines', authenticateToken, async (req, res) => {
       'INSERT INTO Routine (name, description, difficulty) VALUES (?, ?, ?)',
       [name, description || null, difficulty || null]
     );
+
+    await producer.send({
+      topic: 'auditoria.gyms',
+      messages: [{ value: JSON.stringify({
+        tenant: 'Gimnasio Sur',
+        action: 'CREATE_ROUTINE',
+        routine_name: name,
+        timestamp: new Date().toISOString()
+      })}]
+    });
+
     res.status(201).json({ message: 'Routine created successfully', id: result.insertId });
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-app.post('/api/athletes/:id/routines', authenticateToken, async (req, res) => {
-  const athleteId = req.params.id;
-  const { routine_id } = req.body;
-  if (!routine_id) return res.status(400).json({ error: 'routine_id is required' });
-
+/**
+ * Elimina una rutina del catálogo.
+ * Reporta el borrado a Kafka para la auditoría de cambios destructivos.
+ */
+app.delete('/api/routines/:id', authenticateToken, async (req, res) => {
+  const routineId = req.params.id;
   try {
-    const [result] = await pool.query(
-      'INSERT INTO AthleteRoutine (athlete_id, routine_id) VALUES (?, ?)',
-      [athleteId, routine_id]
-    );
+    await pool.query('DELETE FROM AthleteRoutine WHERE routine_id = ?', [routineId]);
+    await pool.query('DELETE FROM Routine WHERE id = ?', [routineId]);
 
     await producer.send({
       topic: 'auditoria.gyms',
       messages: [{ value: JSON.stringify({
         tenant: 'Gimnasio Sur',
-        action: 'ROUTINE_ASSIGNED',
-        athlete_id: athleteId,
-        routine_id: routine_id,
+        action: 'DELETE_ROUTINE',
+        routine_id: routineId,
         timestamp: new Date().toISOString()
       })}]
     });
 
-    res.status(201).json({ message: 'Routine assigned successfully', id: result.insertId });
+    res.status(200).json({ message: 'Routine deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+/**
+ * Endpoint de trazabilidad de entrenamiento.
+ * Registra en Kafka cuando un atleta decide comenzar una rutina específica.
+ */
+app.post('/api/audit/training', authenticateToken, async (req, res) => {
+  const username = req.user.preferred_username || 'Unknown';
+  const routineName = req.body.routine_name || 'Unknown Routine';
+  try {
+    await producer.send({
+      topic: 'auditoria.gyms',
+      messages: [{ value: JSON.stringify({
+        tenant: 'Gimnasio Sur',
+        action: 'TRAINING_STARTED',
+        user: username,
+        routine: routineName,
+        timestamp: new Date().toISOString()
+      })}]
+    });
+    res.status(200).json({ status: 'training_logged' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });

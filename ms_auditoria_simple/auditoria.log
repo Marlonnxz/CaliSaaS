@@ -1,2 +1,19 @@
-[2026-05-13T03:18:53.469Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ATHLETE", "athlete_id": 1, "timestamp": "2026-05-13T03:18:53.443218"}
-[2026-05-13T03:19:05.426Z] {"tenant": "Gimnasio Norte", "action": "ROUTINE_ASSIGNED", "athlete_id": 1, "routine_id": "1", "timestamp": "2026-05-13T03:19:05.421927"}
+[2026-05-19T03:40:34.674Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "owner_norte", "timestamp": "2026-05-19T03:40:34.664403"}
+[2026-05-19T03:40:54.722Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ATHLETE", "athlete_id": 8, "timestamp": "2026-05-19T03:40:54.719095"}
+[2026-05-19T03:41:10.950Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ROUTINE", "routine_name": "fdafa", "timestamp": "2026-05-19T03:41:10.947679"}
+[2026-05-19T03:41:28.993Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ROUTINE", "routine_name": "sdsd", "timestamp": "2026-05-19T03:41:28.990794"}
+[2026-05-19T03:41:38.248Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ROUTINE", "routine_name": "fadfadf", "timestamp": "2026-05-19T03:41:38.246136"}
+[2026-05-19T03:43:30.153Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "owner_norte", "timestamp": "2026-05-19T03:43:30.147451"}
+[2026-05-19T03:43:35.697Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "owner_norte", "timestamp": "2026-05-19T03:43:35.692861"}
+[2026-05-19T03:45:43.961Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "owner_norte", "timestamp": "2026-05-19T03:45:43.952234"}
+[2026-05-19T03:45:46.173Z] {"tenant": "Gimnasio Norte", "action": "DELETE_ROUTINE", "routine_id": 5, "timestamp": "2026-05-19T03:45:46.170622"}
+[2026-05-19T03:47:17.839Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "owner_norte", "timestamp": "2026-05-19T03:47:17.834827"}
+[2026-05-19T03:57:01.051Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "owner_norte", "timestamp": "2026-05-19T03:57:01.038801"}
+[2026-05-19T03:57:07.810Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ROUTINE", "routine_name": "dfdsf", "timestamp": "2026-05-19T03:57:07.806993"}
+[2026-05-19T03:57:25.430Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ATHLETE", "athlete_id": 9, "timestamp": "2026-05-19T03:57:25.427824"}
+[2026-05-19T03:57:32.276Z] {"tenant": "Gimnasio Norte", "action": "CREATE_ROUTINE", "routine_name": "xxxxx", "timestamp": "2026-05-19T03:57:32.273301"}
+[2026-05-19T03:57:43.345Z] {"action": "USER_LOGIN", "tenant": "Gimnasio Norte", "user": "atleta_norte", "timestamp": "2026-05-19T03:57:43.341155"}
+[2026-05-19T03:57:45.613Z] {"action": "TRAINING_STARTED", "tenant": "Gimnasio Norte", "user": "atleta_norte", "routine": "xxxxx", "timestamp": "2026-05-19T03:57:45.610015"}
+[2026-05-19T03:57:48.990Z] {"action": "TRAINING_STARTED", "tenant": "Gimnasio Norte", "user": "atleta_norte", "routine": "dfdsf", "timestamp": "2026-05-19T03:57:48.988010"}
+[2026-05-19T03:57:50.595Z] {"action": "TRAINING_STARTED", "tenant": "Gimnasio Norte", "user": "atleta_norte", "routine": "fadfadf", "timestamp": "2026-05-19T03:57:50.592380"}
+[2026-05-19T03:57:56.076Z] {"action": "TRAINING_STARTED", "tenant": "Gimnasio Norte", "user": "atleta_norte", "routine": "Prueba", "timestamp": "2026-05-19T03:57:56.073480"}

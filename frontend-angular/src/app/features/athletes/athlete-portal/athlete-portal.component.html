@@ -21,7 +21,7 @@
             </span>
           </div>
           <p class="routine-desc">{{ routine.description || 'Sin descripción detallada.' }}</p>
-          <button class="btn-start">Comenzar Entrenamiento</button>
+          <button class="btn-start" (click)="startTraining(routine)">Comenzar Entrenamiento</button>
         </div>
       }
       @empty {
@@ -31,4 +31,20 @@
       }
     </div>
   </div>
+
+  <!-- Motivational Modal -->
+  @if (showMotivationalModal) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-icon">🔥</div>
+        <h2 class="modal-title">¡Hora de Entrenar!</h2>
+        <h4 class="modal-routine">Rutina: {{ activeRoutineName }}</h4>
+        <p class="modal-quote">"{{ motivationalMessage }}"</p>
+        
+        <div class="modal-actions">
+          <button class="btn-primary-modal" (click)="closeModal()">¡A darle con toda!</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>
