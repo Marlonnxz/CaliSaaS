@@ -19,14 +19,20 @@ DB_USER = os.environ.get('DB_USER', 'user')
 DB_PASSWORD = os.environ.get('DB_PASSWORD', 'password')
 KAFKA_BROKER = os.environ.get('KAFKA_BROKER', 'localhost:9092')
 
-try:
-    producer = KafkaProducer(
-        bootstrap_servers=[KAFKA_BROKER],
-        value_serializer=lambda v: json.dumps(v).encode('utf-8')
-    )
-except Exception as e:
-    print(f"Error connecting to Kafka: {e}")
-    producer = None
+import time
+
+producer = None
+for attempt in range(15):
+    try:
+        producer = KafkaProducer(
+            bootstrap_servers=[KAFKA_BROKER],
+            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        )
+        print("Connected to Kafka successfully")
+        break
+    except Exception as e:
+        print(f"Error connecting to Kafka (attempt {attempt+1}/15): {e}")
+        time.sleep(3)
 
 def get_db_connection():
     return psycopg.connect(
@@ -110,12 +116,17 @@ def audit_login():
     data = jwt.decode(token, options={"verify_signature": False})
     
     username = data.get('preferred_username', 'Unknown')
-    producer.send('auditoria.gyms', {
-        'action': 'USER_LOGIN',
-        'tenant': 'Gimnasio Norte',
-        'user': username,
-        'timestamp': datetime.now().isoformat()
-    })
+    if producer:
+        try:
+            producer.send('auditoria.gyms', {
+                'action': 'USER_LOGIN',
+                'tenant': 'Gimnasio Norte',
+                'user': username,
+                'timestamp': datetime.now().isoformat()
+            })
+            producer.flush()
+        except Exception as kafka_err:
+            print(f"Error sending login audit to Kafka: {kafka_err}")
     return jsonify({'status': 'logged'}), 200
 
 @app.route('/api/athletes', methods=['POST', 'OPTIONS'])
@@ -139,13 +150,16 @@ def create_athlete():
         conn.commit()
         
         if producer:
-            producer.send('auditoria.gyms', {
-                'tenant': 'Gimnasio Norte',
-                'action': 'CREATE_ATHLETE',
-                'athlete_id': athlete_id,
-                'timestamp': datetime.utcnow().isoformat()
-            })
-            producer.flush()
+            try:
+                producer.send('auditoria.gyms', {
+                    'tenant': 'Gimnasio Norte',
+                    'action': 'CREATE_ATHLETE',
+                    'athlete_id': athlete_id,
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+                producer.flush()
+            except Exception as kafka_err:
+                print(f"Error sending CREATE_ATHLETE audit to Kafka: {kafka_err}")
         return jsonify({'message': 'Athlete created successfully', 'id': athlete_id}), 201
     except Exception as e:
         if 'conn' in locals(): conn.rollback()
@@ -169,13 +183,16 @@ def delete_athlete(athlete_id):
         conn.commit()
 
         if producer:
-            producer.send('auditoria.gyms', {
-                'tenant': 'Gimnasio Norte',
-                'action': 'DELETE_ATHLETE',
-                'athlete_id': athlete_id,
-                'timestamp': datetime.now().isoformat()
-            })
-            producer.flush()
+            try:
+                producer.send('auditoria.gyms', {
+                    'tenant': 'Gimnasio Norte',
+                    'action': 'DELETE_ATHLETE',
+                    'athlete_id': athlete_id,
+                    'timestamp': datetime.now().isoformat()
+                })
+                producer.flush()
+            except Exception as kafka_err:
+                print(f"Error sending DELETE_ATHLETE audit to Kafka: {kafka_err}")
 
         return jsonify({'message': 'Athlete deleted successfully'}), 200
     except Exception as e:
@@ -221,13 +238,16 @@ def create_routine():
         conn.commit()
 
         if producer:
-            producer.send('auditoria.gyms', {
-                'tenant': 'Gimnasio Norte',
-                'action': 'CREATE_ROUTINE',
-                'routine_name': data['name'],
-                'timestamp': datetime.now().isoformat()
-            })
-            producer.flush()
+            try:
+                producer.send('auditoria.gyms', {
+                    'tenant': 'Gimnasio Norte',
+                    'action': 'CREATE_ROUTINE',
+                    'routine_name': data['name'],
+                    'timestamp': datetime.now().isoformat()
+                })
+                producer.flush()
+            except Exception as kafka_err:
+                print(f"Error sending CREATE_ROUTINE audit to Kafka: {kafka_err}")
 
         return jsonify({'message': 'Routine created successfully', 'id': routine_id}), 201
     except Exception as e:
@@ -252,13 +272,16 @@ def delete_routine(routine_id):
         conn.commit()
 
         if producer:
-            producer.send('auditoria.gyms', {
-                'tenant': 'Gimnasio Norte',
-                'action': 'DELETE_ROUTINE',
-                'routine_id': routine_id,
-                'timestamp': datetime.now().isoformat()
-            })
-            producer.flush()
+            try:
+                producer.send('auditoria.gyms', {
+                    'tenant': 'Gimnasio Norte',
+                    'action': 'DELETE_ROUTINE',
+                    'routine_id': routine_id,
+                    'timestamp': datetime.now().isoformat()
+                })
+                producer.flush()
+            except Exception as kafka_err:
+                print(f"Error sending DELETE_ROUTINE audit to Kafka: {kafka_err}")
 
         return jsonify({'message': 'Routine deleted successfully'}), 200
     except Exception as e:
@@ -284,18 +307,33 @@ def audit_training():
     username = jwt_data.get('preferred_username', 'Unknown')
     
     if producer:
-        producer.send('auditoria.gyms', {
-            'action': 'TRAINING_STARTED',
-            'tenant': 'Gimnasio Norte',
-            'user': username,
-            'routine': routine_name,
-            'timestamp': datetime.now().isoformat()
-        })
-        producer.flush()
+        try:
+            producer.send('auditoria.gyms', {
+                'action': 'TRAINING_STARTED',
+                'tenant': 'Gimnasio Norte',
+                'user': username,
+                'routine': routine_name,
+                'timestamp': datetime.now().isoformat()
+            })
+            producer.flush()
+        except Exception as kafka_err:
+            print(f"Error sending TRAINING_STARTED audit to Kafka: {kafka_err}")
     return jsonify({'status': 'training_logged'}), 200
 if __name__ == '__main__':
-    try:
-        init_db()
-    except Exception as e:
-        print(f"Could not initialize DB: {e}")
+    db_initialized = False
+    for attempt in range(15):
+        try:
+            init_db()
+            print("Database initialized successfully")
+            db_initialized = True
+            break
+        except Exception as e:
+            print(f"Could not initialize DB (attempt {attempt+1}/15): {e}")
+            time.sleep(3)
+            
+    if not db_initialized:
+        print("Failed to initialize database. Exiting...")
+        import sys
+        sys.exit(1)
+        
     app.run(host='0.0.0.0', port=5000)

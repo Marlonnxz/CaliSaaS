@@ -26,12 +26,19 @@ const kafka = new Kafka({
 const producer = kafka.producer();
 
 const initKafka = async () => {
-  try {
-    await producer.connect();
-    console.log('Connected to Kafka successfully');
-  } catch (error) {
-    console.error('Error connecting to Kafka', error);
+  for (let attempt = 1; attempt <= 15; attempt++) {
+    try {
+      await producer.connect();
+      console.log('Connected to Kafka successfully');
+      return;
+    } catch (error) {
+      console.error(`Error connecting to Kafka (attempt ${attempt}/15):`, error.message);
+      if (attempt < 15) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
   }
+  console.error('Could not connect to Kafka after 15 attempts. Proceeding without Kafka...');
 };
 initKafka();
 
@@ -51,40 +58,53 @@ const authenticateToken = (req, res, next) => {
 };
 
 const initDb = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS Athlete (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      first_name VARCHAR(255) NOT NULL,
-      last_name VARCHAR(255) NOT NULL,
-      weight FLOAT,
-      height FLOAT,
-      keycloak_username VARCHAR(255)
-    )
-  `);
-  
-  try {
-    await pool.query('ALTER TABLE Athlete ADD COLUMN keycloak_username VARCHAR(255)');
-  } catch (e) {
-    // Ignore if column already exists
+  for (let attempt = 1; attempt <= 15; attempt++) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS Athlete (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          first_name VARCHAR(255) NOT NULL,
+          last_name VARCHAR(255) NOT NULL,
+          weight FLOAT,
+          height FLOAT,
+          keycloak_username VARCHAR(255)
+        )
+      `);
+      
+      try {
+        await pool.query('ALTER TABLE Athlete ADD COLUMN keycloak_username VARCHAR(255)');
+      } catch (e) {
+        // Ignore if column already exists
+      }
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS Routine (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          difficulty VARCHAR(50)
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS AthleteRoutine (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          athlete_id INT,
+          routine_id INT,
+          assigned_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (athlete_id) REFERENCES Athlete(id),
+          FOREIGN KEY (routine_id) REFERENCES Routine(id)
+        )
+      `);
+      console.log('Database tables initialized successfully');
+      return;
+    } catch (error) {
+      console.error(`Error initializing database tables (attempt ${attempt}/15):`, error.message);
+      if (attempt < 15) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
   }
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS Routine (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      description TEXT,
-      difficulty VARCHAR(50)
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS AthleteRoutine (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      athlete_id INT,
-      routine_id INT,
-      assigned_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (athlete_id) REFERENCES Athlete(id),
-      FOREIGN KEY (routine_id) REFERENCES Routine(id)
-    )
-  `);
+  console.error('Could not initialize database tables after 15 attempts. Exiting...');
+  process.exit(1);
 };
 initDb().catch(console.error);
 
@@ -107,10 +127,10 @@ app.post('/api/audit/login', authenticateToken, async (req, res) => {
                 })
             }]
         });
-        res.json({ status: 'logged' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Error sending USER_LOGIN audit to Kafka:', err.message);
     }
+    res.json({ status: 'logged' });
 });
 
 /**
@@ -128,15 +148,19 @@ app.post('/api/athletes', authenticateToken, async (req, res) => {
     );
     const athleteId = result.insertId;
 
-    await producer.send({
-      topic: 'auditoria.gyms',
-      messages: [{ value: JSON.stringify({
-        tenant: 'Gimnasio Sur',
-        action: 'CREATE_ATHLETE',
-        athlete_id: athleteId,
-        timestamp: new Date().toISOString()
-      })}]
-    });
+    try {
+      await producer.send({
+        topic: 'auditoria.gyms',
+        messages: [{ value: JSON.stringify({
+          tenant: 'Gimnasio Sur',
+          action: 'CREATE_ATHLETE',
+          athlete_id: athleteId,
+          timestamp: new Date().toISOString()
+        })}]
+      });
+    } catch (kafkaError) {
+      console.error('Error sending CREATE_ATHLETE audit to Kafka:', kafkaError.message);
+    }
 
     res.status(201).json({ message: 'Athlete created successfully', id: athleteId });
   } catch (error) {
@@ -155,15 +179,19 @@ app.delete('/api/athletes/:id', authenticateToken, async (req, res) => {
     await pool.query('DELETE FROM AthleteRoutine WHERE athlete_id = ?', [athleteId]);
     await pool.query('DELETE FROM Athlete WHERE id = ?', [athleteId]);
 
-    await producer.send({
-      topic: 'auditoria.gyms',
-      messages: [{ value: JSON.stringify({
-        tenant: 'Gimnasio Sur',
-        action: 'DELETE_ATHLETE',
-        athlete_id: athleteId,
-        timestamp: new Date().toISOString()
-      })}]
-    });
+    try {
+      await producer.send({
+        topic: 'auditoria.gyms',
+        messages: [{ value: JSON.stringify({
+          tenant: 'Gimnasio Sur',
+          action: 'DELETE_ATHLETE',
+          athlete_id: athleteId,
+          timestamp: new Date().toISOString()
+        })}]
+      });
+    } catch (kafkaError) {
+      console.error('Error sending DELETE_ATHLETE audit to Kafka:', kafkaError.message);
+    }
 
     res.status(200).json({ message: 'Athlete deleted successfully' });
   } catch (error) {
@@ -209,15 +237,19 @@ app.post('/api/routines', authenticateToken, async (req, res) => {
       [name, description || null, difficulty || null]
     );
 
-    await producer.send({
-      topic: 'auditoria.gyms',
-      messages: [{ value: JSON.stringify({
-        tenant: 'Gimnasio Sur',
-        action: 'CREATE_ROUTINE',
-        routine_name: name,
-        timestamp: new Date().toISOString()
-      })}]
-    });
+    try {
+      await producer.send({
+        topic: 'auditoria.gyms',
+        messages: [{ value: JSON.stringify({
+          tenant: 'Gimnasio Sur',
+          action: 'CREATE_ROUTINE',
+          routine_name: name,
+          timestamp: new Date().toISOString()
+        })}]
+      });
+    } catch (kafkaError) {
+      console.error('Error sending CREATE_ROUTINE audit to Kafka:', kafkaError.message);
+    }
 
     res.status(201).json({ message: 'Routine created successfully', id: result.insertId });
   } catch (error) {
@@ -235,15 +267,19 @@ app.delete('/api/routines/:id', authenticateToken, async (req, res) => {
     await pool.query('DELETE FROM AthleteRoutine WHERE routine_id = ?', [routineId]);
     await pool.query('DELETE FROM Routine WHERE id = ?', [routineId]);
 
-    await producer.send({
-      topic: 'auditoria.gyms',
-      messages: [{ value: JSON.stringify({
-        tenant: 'Gimnasio Sur',
-        action: 'DELETE_ROUTINE',
-        routine_id: routineId,
-        timestamp: new Date().toISOString()
-      })}]
-    });
+    try {
+      await producer.send({
+        topic: 'auditoria.gyms',
+        messages: [{ value: JSON.stringify({
+          tenant: 'Gimnasio Sur',
+          action: 'DELETE_ROUTINE',
+          routine_id: routineId,
+          timestamp: new Date().toISOString()
+        })}]
+      });
+    } catch (kafkaError) {
+      console.error('Error sending DELETE_ROUTINE audit to Kafka:', kafkaError.message);
+    }
 
     res.status(200).json({ message: 'Routine deleted successfully' });
   } catch (error) {
@@ -271,11 +307,10 @@ app.post('/api/audit/training', authenticateToken, async (req, res) => {
         timestamp: new Date().toISOString()
       })}]
     });
-    res.status(200).json({ status: 'training_logged' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error sending TRAINING_STARTED audit to Kafka:', error.message);
   }
+  res.status(200).json({ status: 'training_logged' });
 });
 
 const PORT = process.env.PORT || 3000;

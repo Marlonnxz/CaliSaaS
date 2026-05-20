@@ -23,6 +23,25 @@ export class AutenticacionService {
     });
 
     try {
+      // Si ya hay un token guardado y es válido, omitimos check-sso para no borrarlo
+      const existingToken = localStorage.getItem('auth_token');
+      if (existingToken) {
+        try {
+          const payloadBase64 = existingToken.split('.')[1];
+          const decodedPayload = JSON.parse(atob(payloadBase64));
+          const isExpired = decodedPayload.exp * 1000 < Date.now();
+          if (!isExpired) {
+            console.log("Sesión restaurada desde localStorage");
+            return true;
+          } else {
+            console.log("Token expirado en localStorage");
+            localStorage.removeItem('auth_token');
+          }
+        } catch (e) {
+          localStorage.removeItem('auth_token');
+        }
+      }
+
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
         checkLoginIframe: false, // Evita errores de iframe en localhost/IPs sin SSL
@@ -30,10 +49,7 @@ export class AutenticacionService {
       });
 
       if (authenticated) {
-        // Guardado manual del token
         localStorage.setItem('auth_token', this.keycloak.token || '');
-      } else {
-        localStorage.removeItem('auth_token');
       }
 
       return authenticated;
@@ -44,14 +60,50 @@ export class AutenticacionService {
   }
 
   /**
+   * Realiza login utilizando Direct Access Grant (username/password)
+   * contra el endpoint de tokens de Keycloak para evitar redirección de URL.
+   */
+  async loginWithCredentials(username: string, password: string): Promise<boolean> {
+    const url = `${environment.tenant.keycloakUrl}/realms/${environment.tenant.keycloakRealm}/protocol/openid-connect/token`;
+    const body = new URLSearchParams();
+    body.set('grant_type', 'password');
+    body.set('client_id', environment.tenant.keycloakClientId);
+    body.set('username', username);
+    body.set('password', password);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body.toString()
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error_description || 'Credenciales inválidas o error de servidor');
+      }
+
+      const data = await response.json();
+      if (data.access_token) {
+        localStorage.setItem('auth_token', data.access_token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error en login con credenciales:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Genera dinámicamente la URL de inicio de sesión hacia el servidor Keycloak centralizado.
    * Redirige al usuario al flujo de autenticación estándar OIDC.
    */
   async login() {
     if (this.keycloak) {
       try {
-        // En lugar de depender de la promesa interna de keycloak.login(), 
-        // generamos la URL y forzamos la redirección manualmente.
         const url = await this.keycloak.createLoginUrl({
           redirectUri: window.location.origin + '/dashboard'
         });
@@ -69,10 +121,8 @@ export class AutenticacionService {
    * Redirige a la página principal de la plataforma.
    */
   logout() {
-    if (this.keycloak) {
-      this.keycloak.logout({ redirectUri: window.location.origin });
-      localStorage.removeItem('auth_token');
-    }
+    localStorage.removeItem('auth_token');
+    window.location.href = window.location.origin;
   }
 
   getToken(): string | null {

@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { AutenticacionService } from './core/services/autenticacion.service';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { cacheInterceptor } from './core/interceptors/cache.interceptor';
 
 function initializeKeycloak(authService: AutenticacionService) {
   return () => authService.init();
@@ -12,7 +13,7 @@ function initializeKeycloak(authService: AutenticacionService) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, cacheInterceptor])),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeKeycloak,

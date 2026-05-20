@@ -1,12 +1,10 @@
 # CaliSaaS - Plataforma Distribuida de Gestión de Gimnasios
 
-¡Bienvenido al repositorio oficial del proyecto **CaliSaaS**! 🚀
-
-Este proyecto implementa una arquitectura distribuida (microservicios) orientada al formato **Multi-Tenant con Aislamiento Físico** (bases de datos y tecnologías separadas para cada gimnasio), comunicados mediante coreografía de eventos.
+¡Bienvenido al repositorio oficial del proyecto **CaliSaaS**!
 
 ---
 
-## 🛠️ Tecnologías Principales
+## Tecnologías Principales
 
 - **Frontend:** Angular 17+ (Standalone Components, UI Premium Moderna).
 - **Tenant 1 (Gimnasio Norte):** Backend en Python (Flask) + Base de Datos PostgreSQL.
@@ -17,7 +15,7 @@ Este proyecto implementa una arquitectura distribuida (microservicios) orientada
 
 ---
 
-## 🚀 Requisitos Previos
+## Requisitos Previos
 
 Para que el proyecto funcione en tu computadora a la perfección, necesitas:
 1. **Docker Desktop** (Asegúrate de que esté abierto y corriendo).
@@ -27,7 +25,7 @@ Para que el proyecto funcione en tu computadora a la perfección, necesitas:
 
 ---
 
-## ⚙️ GUÍA PASO A PASO PARA EJECUTAR EL PROYECTO (A prueba de balas)
+## GUÍA PASO A PASO PARA EJECUTAR EL PROYECTO (A prueba de balas)
 
 Sigue estas instrucciones al pie de la letra. ¡Gracias a Docker, **solo necesitas abrir 1 terminal**!
 
@@ -56,11 +54,11 @@ cmd.exe /c "docker exec -i keycloak /bin/bash < keycloak-setup.sh"
 
 ---
 
-## 💻 CÓMO PROBAR LA APLICACIÓN Y EL RBAC
+## CÓMO PROBAR LA APLICACIÓN Y EL RBAC
 
 El sistema ahora cuenta con **Control de Acceso Basado en Roles (RBAC)** integrado con Keycloak. Dependiendo del usuario con el que ingreses, verás una interfaz diferente.
 
-### 1. El Portal Centralizado (`http://TU_IP_LOCAL:4200`)
+### 1. El Portal Centralizado (http://TU_IP_LOCAL:4200)
 La aplicación ahora funciona como un **SaaS de Login Único (SSO)**. Angular leerá tu usuario y te redirigirá mágicamente al backend del Norte (Python) o del Sur (Node.js).
 
 **Para probar el Gimnasio Norte (PostgreSQL - Puerto 5000):**
@@ -81,7 +79,7 @@ El archivo `ms_auditoria_simple/auditoria.log` actúa como el registro de evento
 
 ---
 
-## 📚 Diccionario de Endpoints (API REST)
+## Diccionario de Endpoints (API REST)
 
 Ambos microservicios backend implementan estricta paridad arquitectónica.
 

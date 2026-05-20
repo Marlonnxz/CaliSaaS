@@ -33,6 +33,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:23.0.0
     container_name: keycloak
+    restart: always
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://db_gimnasio_norte_pg:5432/gimnasio_norte
@@ -83,6 +84,7 @@ services:
     build:
       context: ./tenant_norte_python
     container_name: api_norte
+    restart: always
     ports:
       - "5000:5000"
     environment:
@@ -102,6 +104,7 @@ services:
     build:
       context: ./tenant_sur_node
     container_name: api_sur
+    restart: always
     ports:
       - "3000:3000"
     environment:
@@ -121,6 +124,7 @@ services:
     build:
       context: ./ms_auditoria_simple
     container_name: auditoria
+    restart: always
     environment:
       - KAFKA_BROKER=kafka:29092
     depends_on:
@@ -136,6 +140,9 @@ services:
     container_name: frontend
     ports:
       - "4200:4200"
+    volumes:
+      - ./frontend-angular:/app
+      - /app/node_modules
     networks:
       - shared_network
 

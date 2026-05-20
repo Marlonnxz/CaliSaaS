@@ -45,13 +45,36 @@ export class AppComponent implements OnInit {
     }
   }
 
-  login() {
-    this.authService.login();
+  errorMessage = '';
+  isLoading = false;
+
+  async onLogin(username: string, password: string, event: Event) {
+    event.preventDefault();
+    if (!username || !password) {
+      this.errorMessage = 'Por favor, ingrese usuario y contraseña.';
+      return;
+    }
+
+    this.errorMessage = '';
+    this.isLoading = true;
+
+    try {
+      const success = await this.authService.loginWithCredentials(username, password);
+      if (success) {
+        this.applyTheme();
+      } else {
+        this.errorMessage = 'No se pudo obtener el token de acceso.';
+      }
+    } catch (err: any) {
+      console.error(err);
+      this.errorMessage = err.message || 'Error al iniciar sesión. Verifique sus credenciales.';
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   logout() {
     this.authService.logout();
-    // Restaurar tema por defecto al salir
     this.applyTheme();
   }
 }
